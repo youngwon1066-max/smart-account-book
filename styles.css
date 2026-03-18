@@ -23,19 +23,22 @@ body {
   min-height: 100vh;
 }
 
-/* 모바일 뷰 컨테이너 */
+/* 모바일 뷰 컨테이너 (스크롤 100dvh 최적화 적용) */
 .app-container {
   width: 100%;
-  max-width: 414px;
-  height: 100vh;
-  max-height: 896px;
+  max-width: 480px; /* 기존 414px에서 조금 더 확장성 있게 조절 */
+  height: 100dvh; /* 브라우저 주소창 고려 동적 높이 */
+  max-height: 100dvh;
   background-color: var(--bg-color);
   position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-  border-radius: 30px; 
+  border-radius: 0; /* 모바일에 꽉 차게 변경 */
+}
+@media (min-width: 481px) {
+  .app-container { border-radius: 30px; margin: 20px 0; max-height: 896px; }
 }
 
 /* Base Neumorphism Panel */
@@ -137,8 +140,25 @@ body {
 }
 
 /* Dashboard View */
+.dashboard-header { margin-bottom: 16px; }
+
+/* 검색 바 (Search Bar) */
+.search-bar-container {
+  display: flex; align-items: center; padding: 10px 16px; margin-bottom: 20px;
+  background: var(--bg-color); border-radius: 16px;
+}
+.search-icon { font-size: 20px; color: var(--text-light); margin-right: 10px; }
+.search-input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 14px; color: var(--text-dark); font-family: inherit;
+}
+.search-input::placeholder { color: rgba(157, 164, 180, 0.7); }
+.clear-search-icon { font-size: 20px; color: var(--text-light); cursor: pointer; transition: color 0.2s; }
+.clear-search-icon:active { color: var(--accent); }
+.clear-search-icon.hidden { display: none; }
+
 .chart-panel h3 { font-size: 16px; margin-bottom: 5px; text-align: center; }
-.chart-summary { text-align: center; font-size: 14px; margin-top: -10px; line-height: 1.5;}
+.chart-summary { text-align: center; font-size: 14px; margin-top: -10px; line-height: 1.5; padding-bottom: 12px;}
 .chart-summary strong { color: var(--accent); font-size: 16px; }
 
 .goal-header { display: flex; justify-content: space-between; margin-bottom: 15px; }

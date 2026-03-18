@@ -83,7 +83,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // ---- 1. Navigation Logic (탭 전환) ----
+    // ---- 1. Live Search (실시간 검색) 로직 ----
+    const searchInput = document.getElementById('live-search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+
+    if (searchInput && clearSearchBtn) {
+        // 검색어 입력 이벤트
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim().toLowerCase();
+            
+            // 검색어 유무에 따른 X 버튼토글
+            if (query.length > 0) clearSearchBtn.classList.remove('hidden');
+            else clearSearchBtn.classList.add('hidden');
+
+            filterListItems(query);
+        });
+
+        // X 버튼 클릭 이벤트 (초기화)
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            filterListItems(''); // 전체 보기로 복구
+            searchInput.focus();
+        });
+    }
+
+    // 아이템 필터 엔진
+    function filterListItems(query) {
+        // 1. 홈 화면의 최근 내역(다이어리 템플릿 항목) 필터링
+        const diaryItems = document.querySelectorAll('#diary-list .diary-item');
+        diaryItems.forEach(item => {
+            const textContent = item.innerText.toLowerCase();
+            if (textContent.includes(query)) {
+                item.style.display = 'flex'; // 기존 레이아웃 유지
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // 2. 통계 화면의 카테고리(상세내역 아코디언) 그룹 필터링
+        const analyticsListArea = document.querySelector('.analytics-list');
+        if (analyticsListArea) {
+            const wrappers = analyticsListArea.querySelectorAll('.analytics-item-wrapper');
+            wrappers.forEach(wrapper => {
+                const textContent = wrapper.innerText.toLowerCase();
+                if (textContent.includes(query)) {
+                    wrapper.style.display = 'block';
+                    // 검색어가 2글자 이상 포함되어 있으면 아고디언 자동 확장 (UX 향상)
+                    if (query.length > 1) wrapper.classList.add('expanded');
+                } else {
+                    wrapper.style.display = 'none';
+                    wrapper.classList.remove('expanded');
+                }
+            });
+        }
+    }
+
+
+    // ---- 2. Navigation Logic (탭 전환) ----
     const navItems = document.querySelectorAll('.nav-item');
     const views = document.querySelectorAll('.view');
 
