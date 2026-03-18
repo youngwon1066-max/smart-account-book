@@ -11,25 +11,52 @@
 <body>
     <div class="app-container">
         <!-- 상단 헤더 영역 -->
-        <header class="header">
-            <div class="user-info">
-                <!-- 다이스베어를 이용한 아바타 캐릭터 적용 -->
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Lucky&backgroundColor=E0E5EC" alt="Avatar" class="avatar" id="pet-avatar" />
-                <div class="greeting">
-                    <h2>안녕하세요, 김프로님</h2>
-                    <p>우리 가족 가계부, 오늘도 화이팅!</p>
+    <div id="app">
+        <!-- 온보딩 (초기 세팅) 화면 -->
+        <div id="onboarding-view" class="onboarding-overlay">
+            <div class="onboarding-card neu-panel">
+                <div class="onboarding-header">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Welcome&backgroundColor=B5EAD7" alt="Welcome Avatar" class="onboarding-avatar">
+                    <h2>환영합니다! 👋</h2>
+                    <p>나만의 감성 가계부를 시작해볼까요?</p>
                 </div>
+                
+                <div class="input-group">
+                    <label>사용자 이름 (별명)</label>
+                    <input type="text" id="ob-name" class="neu-input" placeholder="예: 최고기획자, 우리집">
+                </div>
+                
+                <div class="input-group">
+                    <label>이번 달 목표 예산 (원)</label>
+                    <input type="number" id="ob-budget" class="neu-input" placeholder="숫자만 입력 (예: 1000000)">
+                </div>
+                
+                <div class="input-group">
+                    <label>가계부 한줄 다짐 📝</label>
+                    <input type="text" id="ob-goal" class="neu-input" placeholder="예: 이번 달은 배달음식 줄이기!">
+                </div>
+
+                <button id="ob-start-btn" class="neu-btn primary-btn"><i class="ph ph-rocket-launch"></i> 가계부 시작하기</button>
             </div>
-            <div class="actions">
+        </div>
+
+        <!-- 1. Header (상단바) -->
+        <header class="header neu-panel">
+            <h1 id="header-title">감성 가계부 😌</h1>
+            <div class="header-icons">
                 <i class="ph ph-bell"></i>
             </div>
         </header>
 
-        <!-- 메인 콘텐츠 영역 -->
+        <!-- 2. Main Content Area (메인 뷰 영역) -->
         <main class="content-area">
             
-            <!-- 뷰: 홈 대시보드 -->
-            <div id="view-dashboard" class="view active-view">
+            <!-- 뷰: 홈 (대시보드) -->
+            <div id="view-home" class="view active">
+                <div class="dashboard-header">
+                    <h2 id="home-greeting">안녕하세요! 🌟</h2>
+                    <p class="subtitle" id="home-goal-text">오늘도 계획적인 하루를 보내볼까요?</p>
+                </div>
                 
                 <!-- 예산 차트 박스 (뉴모피즘 적용) -->
                 <div class="neu-panel chart-panel">

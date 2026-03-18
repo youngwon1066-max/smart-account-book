@@ -1,4 +1,66 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // ---- 0. Onboarding & LocalStorage (초기 세팅) 로직 ----
+    const onboardingView = document.getElementById('onboarding-view');
+    const obNameInput = document.getElementById('ob-name');
+    const obBudgetInput = document.getElementById('ob-budget');
+    const obGoalInput = document.getElementById('ob-goal');
+    const obStartBtn = document.getElementById('ob-start-btn');
+
+    const homeGreeting = document.getElementById('home-greeting');
+    const homeGoalText = document.getElementById('home-goal-text');
+    const headerTitle = document.getElementById('header-title');
+
+    // 내부 저장소에서 유저 정보 확인
+    let userData = JSON.parse(localStorage.getItem('smartAccountUserData'));
+
+    if (!userData) {
+        // 첫 접속 시: 온보딩 화면 표시 유지
+        onboardingView.classList.remove('hidden');
+    } else {
+        // 기존 재접속 시: 온보딩 화면 숨김 및 데이터 바로 바인딩
+        onboardingView.classList.add('hidden');
+        applyUserData(userData);
+    }
+
+    obStartBtn.addEventListener('click', () => {
+        const name = obNameInput.value.trim() || '아무개';
+        const budget = Number(obBudgetInput.value) || 1000000;
+        const goal = obGoalInput.value.trim() || '오늘도 계획적인 하루를 보내볼까요?';
+
+        userData = { name, budget, goal };
+        localStorage.setItem('smartAccountUserData', JSON.stringify(userData));
+        
+        onboardingView.classList.add('hidden');
+        applyUserData(userData);
+        
+        // 홈 화면 업데이트를 위해 차트 재계산 트리거
+        updateBudgetChartBase(budget);
+    });
+
+    function applyUserData(data) {
+        homeGreeting.innerText = `안녕하세요, ${data.name}님! 🌟`;
+        homeGoalText.innerText = data.goal;
+        headerTitle.innerText = `${data.name}의 가계부 😌`;
+        
+        // 설정 탭 입력창에도 기존 예산 반영
+        const budgetInput = document.getElementById('budget-setting-input');
+        if(budgetInput) budgetInput.value = data.budget;
+    }
+
+    // 초기 예산 베이스 설정을 위한 함수 (홈 화면 진입 시)
+    function updateBudgetChartBase(totalBudget) {
+        // 더미 사용액(55만원) 기준 백분율 계산 연출
+        const spent = 550000;
+        const remaining = Math.max(0, totalBudget - spent);
+        const percentage = ((remaining / totalBudget) * 100).toFixed(1);
+        
+        document.querySelector('.chart-summary').innerHTML = `이달의 남은 예산<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong>`;
+        if (budgetChart) {
+            budgetChart.updateSeries([parseFloat(percentage)]);
+        }
+    }
+
+
     // ---- 1. Navigation Logic (탭 전환) ----
     const navItems = document.querySelectorAll('.nav-item');
     const views = document.querySelectorAll('.view');
