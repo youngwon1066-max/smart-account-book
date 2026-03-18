@@ -102,14 +102,20 @@
                         <h3>12.5만</h3>
                     </div>
                 </div>
-            </div>
-
-            <!-- 뷰: 다이어리 목록형 지출 내역 -->
-            <div id="view-diary" class="view">
-                <h2 class="diary-title">우리가족 소비 & 일상 일기 📖</h2>
-                <!-- 지출 및 일기 내역이 리스트 형태로 추가되는 영역 -->
+                
+                <h2 class="diary-title" style="margin-top:24px;">우리가족 소비 & 일상 일기 📖</h2>
+                <!-- 지출 및 일기 내역이 리스트 형태로 추가되는 (진짜) 홈 영역 -->
                 <div class="diary-list" id="diary-list">
                     <!-- Javascript 로 데이터가 렌더링 됩니다. -->
+                </div>
+            </div>
+
+            <!-- 뷰: 다이어리 목록형 지출 내역 (현재 사용 안함, 확장 준비용) -->
+            <div id="view-diary" class="view">
+                <h2 class="diary-title">나의 감정 일기장 📖</h2>
+                <div style="text-align:center; padding: 60px 0;">
+                    <i class="ph ph-book-open" style="font-size: 54px; color: var(--text-light); opacity: 0.5;"></i>
+                    <p style="color: var(--text-light); margin-top: 16px; font-size:15px; line-height:1.5;">준비 중인 기능입니다.<br>하단의 <strong>[홈]</strong> 탭에서<br>일상과 지출 기록을 확인하세요!</p>
                 </div>
             </div>
 
@@ -228,7 +234,7 @@
 
         <!-- 하단 네비게이션 탭 (4 탭으로 확장) -->
         <nav class="bottom-nav">
-            <button class="nav-item active" data-target="view-dashboard">
+            <button class="nav-item active" data-target="view-home">
                 <i class="ph ph-squares-four"></i>
                 <span>홈</span>
             </button>

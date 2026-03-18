@@ -515,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 모달 닫기 및 다이어리 뷰로 즉시 이동
         modal.classList.remove('open');
-        navItems[2].click(); // 일기 탭 인덱스 2
+        navItems[0].click(); // 홈(대시보드) 탭 인덱스 0으로 복귀
     });
 
     const diaryList = document.getElementById('diary-list');
@@ -671,8 +671,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.diary-actions-menu').forEach(m => m.classList.remove('show'));
     });
 
-    // 카테고리별 아이콘 매퍼
+    // 카테고리별 아이콘 매퍼 (레거시 과거 데이터 충돌 방지 로직 포함)
     function getCategoryIcon(cat) {
+        if (!cat || typeof cat !== 'string') return 'ph-receipt'; // 방어 로직: 과거 category 없는 데이터 호환 
         if(cat.includes('식비') || cat.includes('카페') || cat.includes('마트')) return 'ph-coffee';
         if(cat.includes('교통')) return 'ph-car';
         if(cat.includes('여가') || cat.includes('문화')) return 'ph-film-strip';
