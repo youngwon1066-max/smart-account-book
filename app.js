@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const onboardingView = document.getElementById('onboarding-view');
     const obNameInput = document.getElementById('ob-name');
     const obBudgetInput = document.getElementById('ob-budget');
+    const obGoalInput = document.getElementById('ob-goal');
     const obStartBtn = document.getElementById('ob-start-btn');
     const obNameLabel = document.getElementById('ob-name-label');
     const modeRadios = document.querySelectorAll('input[name="usageMode"]');
