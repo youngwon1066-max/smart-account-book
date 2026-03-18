@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>우리가족 감성 가계부</title>
+    <!-- Phosphor Icons (귀여운 외곽선 아이콘) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 상단 헤더 영역 -->
+        <header class="header">
+            <div class="user-info">
+                <!-- 다이스베어를 이용한 아바타 캐릭터 적용 -->
+                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Lucky&backgroundColor=E0E5EC" alt="Avatar" class="avatar" id="pet-avatar" />
+                <div class="greeting">
+                    <h2>안녕하세요, 김프로님</h2>
+                    <p>우리 가족 가계부, 오늘도 화이팅!</p>
+                </div>
+            </div>
+            <div class="actions">
+                <i class="ph ph-bell"></i>
+            </div>
+        </header>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <main class="content-area">
+            
+            <!-- 뷰: 홈 대시보드 -->
+            <div id="view-dashboard" class="view active-view">
+                
+                <!-- 예산 차트 박스 (뉴모피즘 적용) -->
+                <div class="neu-panel chart-panel">
+                    <h3>이번 달 생활비 예산</h3>
+                    <div id="budgetChart"></div>
+                    <p class="chart-summary">설정된 예산 2,000,000원 중<br><strong id="spent-amount">1,450,000원</strong> 남았습니다.</p>
+                </div>
+
+                <!-- 게이미피케이션 (목표 바) -->
+                <div class="neu-panel goal-panel">
+                    <div class="goal-header">
+                        <h3>제주도 가족 여행 풀빌라</h3>
+                        <i class="ph ph-airplane-tilt"></i>
+                    </div>
+                    <div class="progress-bar-container neu-inset">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <p class="goal-text">65% 달성! (1,300,000 / 2,000,000원)</p>
+                </div>
+                
+                <!-- 뱃지 및 통계 요약 (업적 시스템) -->
+                <div class="stats-grid">
+                    <div class="neu-panel stat-box">
+                        <p>연속 무지출</p>
+                        <h3>5일 기록 🏆</h3>
+                    </div>
+                    <div class="neu-panel stat-box">
+                        <p>이번 주 식비</p>
+                        <h3>12.5만</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 뷰: 다이어리 목록형 지출 내역 -->
+            <div id="view-diary" class="view">
+                <h2 class="diary-title">우리가족 소비 & 일상 일기 📖</h2>
+                <!-- 지출 및 일기 내역이 리스트 형태로 추가되는 영역 -->
+                <div class="diary-list" id="diary-list">
+                    <!-- Javascript 로 데이터가 렌더링 됩니다. -->
+                </div>
+            </div>
+
+            <!-- 신규 뷰: 통계 대시보드 -->
+            <div id="view-analytics" class="view">
+                <h2 class="diary-title">우리 가족 소비 패턴 📊</h2>
+                
+                <!-- 날짜 기준 네비게이터 -->
+                <div class="period-navigator neu-panel">
+                    <button class="nav-arrow text-btn" id="prev-period-btn"><i class="ph ph-caret-left"></i></button>
+                    <span class="period-label" id="current-period-label">2026년 3월</span>
+                    <button class="nav-arrow text-btn" id="next-period-btn"><i class="ph ph-caret-right"></i></button>
+                </div>
+                
+                <!-- 기간 선택 토글 -->
+                <div class="neu-panel toggle-container">
+                    <div class="toggle-switch five-tabs">
+                        <input type="radio" id="tab-day" name="period" value="day">
+                        <label for="tab-day">일별</label>
+
+                        <input type="radio" id="tab-week" name="period" value="week">
+                        <label for="tab-week">주별</label>
+
+                        <input type="radio" id="tab-month" name="period" value="month" checked>
+                        <label for="tab-month">월별</label>
+                        
+                        <input type="radio" id="tab-quarter" name="period" value="quarter">
+                        <label for="tab-quarter">분기</label>
+                        
+                        <input type="radio" id="tab-year" name="period" value="year">
+                        <label for="tab-year">연간</label>
+
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <!-- 카테고리별 도넛 차트 -->
+                <div class="neu-panel chart-panel">
+                    <div id="categoryChart"></div>
+                </div>
+
+                <!-- 소비 내역 리스트 -->
+                <div class="neu-panel analytics-list" id="analytics-list">
+                    <!-- JS로 카테고리별 합산 렌더링 -->
+                </div>
+            </div>
+
+            <!-- 신규 뷰: 설정 (예산 입력) -->
+            <div id="view-settings" class="view">
+                <h2 class="diary-title">기본 설정 ⚙️</h2>
+                
+                <div class="neu-panel setting-panel">
+                    <h3>이번 달 예산 설정</h3>
+                    <p class="setting-desc">예산을 명확히 세우면 지출 통제에 큰 도움이 됩니다.</p>
+                    
+                    <div class="input-group">
+                        <label>총 예산 금액 (원)</label>
+                        <input type="number" class="neu-input" id="budget-setting-input" placeholder="예: 2000000" value="2000000" />
+                    </div>
+                    <button class="neu-button primary-btn" id="save-budget-btn">예산 저장하기</button>
+                </div>
+                
+                <div class="neu-panel setting-panel">
+                    <h3>가족 공유 설정</h3>
+                    <div class="setting-item">
+                        <span>초대 코드 복사</span>
+                        <i class="ph ph-copy"></i>
+                    </div>
+                    <div class="setting-item">
+                        <span>연동된 멤버</span>
+                        <span>배우자 (1명)</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- 하단 네비게이션 탭 (4 탭으로 확장) -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-target="view-dashboard">
+                <i class="ph ph-squares-four"></i>
+                <span>홈</span>
+            </button>
+            <button class="nav-item" data-target="view-analytics">
+                <i class="ph ph-chart-pie-slice"></i>
+                <span>통계</span>
+            </button>
+            
+            <div class="nav-fab-space"></div> <!-- 중앙의 FAB 버튼 공간 -->
+            
+            <button class="nav-item" data-target="view-diary">
+                <i class="ph ph-notebook"></i>
+                <span>일기</span>
+            </button>
+            <button class="nav-item" data-target="view-settings">
+                <i class="ph ph-gear"></i>
+                <span>설정</span>
+            </button>
+        </nav>
+
+        <!-- 퀵 엔트리 플로팅 액션 버튼 (FAB) -->
+        <button class="fab" id="fab-btn">
+            <i class="ph ph-plus"></i>
+        </button>
+
+        <!-- 지출 및 일기 기록 모달 오버레이 -->
+        <div class="modal-overlay" id="entry-modal">
+            <div class="neu-panel modal-content">
+                <div class="modal-header">
+                    <h3>새로운 기록 추가</h3>
+                    <button id="close-modal" class="text-btn"><i class="ph ph-x"></i></button>
+                </div>
+                
+                <!-- 모달 내부 탭 전환: 지출 vs 일기 -->
+                <div class="modal-tabs neu-inset">
+                    <button class="modal-tab active" data-tab="tab-expense">💳 지출 기록</button>
+                    <button class="modal-tab" data-tab="tab-journal">📝 하루 일기</button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- 지출 기록 폼 -->
+                    <div id="tab-expense" class="modal-form-area active-area">
+                        <!-- AI 영수증 스캔 기능 (시뮬레이션) -->
+                        <button class="neu-button ocr-scan-btn" id="ocr-btn">
+                            <i class="ph ph-camera"></i>
+                            <span>영수증 스캔 (AI 자동입력)</span>
+                        </button>
+                        
+                        <div class="divider">또는 직접 입력</div>
+                        
+                        <div class="input-group">
+                            <label>금액</label>
+                            <input type="number" class="neu-input" id="amount-input" placeholder="0원" />
+                        </div>
+                        <div class="input-group">
+                            <label>어디서 쓰셨나요?</label>
+                            <input type="text" class="neu-input" id="title-input" placeholder="상호명 입력 (예: 스타벅스)" />
+                        </div>
+                        <div class="input-group">
+                            <label>카테고리</label>
+                            <select class="neu-input" id="category-input">
+                                <option value="식비/카페">식비/카페</option>
+                                <option value="마트/장보기">마트/장보기</option>
+                                <option value="교통/차량">교통/차량</option>
+                                <option value="문화/여가">문화/여가</option>
+                                <option value="육아/가족">육아/가족</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>간단 메모 (선택)</label>
+                            <input type="text" class="neu-input" id="expense-memo-input" placeholder="지출에 대한 짧은 메모" />
+                        </div>
+                    </div>
+
+                    <!-- 일기 기록 폼 -->
+                    <div id="tab-journal" class="modal-form-area">
+                        <div class="input-group">
+                            <label>날짜</label>
+                            <input type="date" class="neu-input" id="journal-date-input" />
+                        </div>
+                        <div class="input-group emoji-selector">
+                            <label>오늘의 기분</label>
+                            <div class="emoji-list neu-inset">
+                                <span class="emoji-item active" data-emoji="😊">😊</span>
+                                <span class="emoji-item" data-emoji="🥰">🥰</span>
+                                <span class="emoji-item" data-emoji="😌">😌</span>
+                                <span class="emoji-item" data-emoji="😢">😢</span>
+                                <span class="emoji-item" data-emoji="😡">😡</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>오늘 무슨 일이 있었나요?</label>
+                            <textarea class="neu-input" id="journal-memo-input" placeholder="가족과 함께한 소중한 하루를 기록해보세요." style="height: 150px;"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="neu-button primary-btn" id="save-btn">저장하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ApexCharts CDN 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="app.js"></script>
+</body>
+</html>
