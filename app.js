@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 내부 저장소에서 유저 정보 확인
     let userData = JSON.parse(localStorage.getItem('smartAccountUserData'));
     let appRecords = JSON.parse(localStorage.getItem('smartAccountRecords')) || [];
+    let editingRecordId = null; // 새 글 저장 버그 방지용 (수정 기능) 전역 변수
 
     if (!userData) {
         // 첫 접속 시: 온보딩 화면 표시 유지
@@ -108,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (currentPeriodType === 'month') return rYear === currentYear && rMonth === currentMonth;
                 if (currentPeriodType === 'quarter') return rYear === currentYear && Math.floor((parseInt(rMonth)-1)/3) === Math.floor((parseInt(currentMonth)-1)/3);
                 if (currentPeriodType === 'year') return rYear === currentYear;
+                if (currentPeriodType === 'specific') return r.date === currentSpecificDate; // 특정일 조회 추가
                 return true; 
             };
             
@@ -291,7 +293,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('entry-modal');
     const closeModal = document.getElementById('close-modal');
     
-    let editingRecordId = null; // 현재 수정 중인 기록 ID 추적 변수
     const saveBtn = document.getElementById('save-btn');
     const ocrBtn = document.getElementById('ocr-btn');
     const avatar = document.getElementById('pet-avatar');
@@ -719,8 +720,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const modeRadiosAnalytics = document.querySelectorAll('input[name="analyticsMode"]');
     
     // 모의 기준 데이터 (현재)
-    let currentPeriodType = 'month'; // day, week, month, quarter, year
+    let currentPeriodType = 'month'; // day, week, month, quarter, year, specific
     let currentAnalyticsMode = 'budget'; // budget, income
+    let currentSpecificDate = null; // Date picker 선택 값 저장용
     
     // 선택된 탭에 따라 상단 텍스트를 모의 변경하는 함수
     function updatePeriodLabelText(type) {
@@ -745,6 +747,20 @@ document.addEventListener('DOMContentLoaded', () => {
             syncAppRenders(); // 관점 전환 시 즉시 재렌더링
         });
     });
+    
+    // 특정 요일 지정 달력 위젯 리스너 연결
+    const specificDatePicker = document.getElementById('specific-date-picker');
+    if (specificDatePicker) {
+        specificDatePicker.addEventListener('change', (e) => {
+            currentPeriodType = 'specific';
+            currentSpecificDate = e.target.value; // "YYYY-MM-DD"
+            
+            // 시각적 피드백: 기존 탭 선택 해제 및 날짜 텍스트 반영
+            periodRadios.forEach(r => r.checked = false);
+            periodLabel.innerText = currentSpecificDate;
+            syncAppRenders();
+        });
+    }
     
     // 화살표 클릭 시 모션 효과 (실제 날짜 증감 로직은 모의로 텍스트 깜빡임만 구현)
     document.getElementById('prev-period-btn').addEventListener('click', () => { animPeriodLabel(); });

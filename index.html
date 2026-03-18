@@ -133,7 +133,11 @@
                 <!-- 날짜 기준 네비게이터 -->
                 <div class="period-navigator neu-panel">
                     <button class="nav-arrow text-btn" id="prev-period-btn"><i class="ph ph-caret-left"></i></button>
-                    <span class="period-label" id="current-period-label">2026년 3월</span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span class="period-label" id="current-period-label" style="font-size:15px; margin-left:10px;">2026년 3월</span>
+                        <label for="specific-date-picker" style="cursor:pointer; color:var(--text-dark); margin-left:4px; font-size:18px;"><i class="ph ph-calendar-blank"></i></label>
+                        <input type="date" id="specific-date-picker" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;" />
+                    </div>
                     <button class="nav-arrow text-btn" id="next-period-btn"><i class="ph ph-caret-right"></i></button>
                 </div>
                 
