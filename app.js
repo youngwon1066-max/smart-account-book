@@ -141,6 +141,27 @@ document.addEventListener('DOMContentLoaded', () => {
             categoryChart.updateSeries(hasAnyAmount ? series : [0,0,0,0,0]);
         }
         
+        // 홈 대시보드 위젯(하드코딩된 더미) 실제 연동 처리
+        const goalText = document.querySelector('.goal-text');
+        const progressFill = document.querySelector('.progress-fill');
+        if (goalText && progressFill) {
+            if(totalBudget > 0 && spent > 0) {
+                const goalPercent = Math.min(100, Math.round((spent/totalBudget)*100));
+                goalText.innerText = `예산 대비 ${goalPercent}% 소진! (${spent.toLocaleString()} / ${totalBudget.toLocaleString()}원)`;
+                progressFill.style.width = goalPercent + '%';
+            } else {
+                goalText.innerText = `0% 소진! (0 / ${(totalBudget||0).toLocaleString()}원)`;
+                progressFill.style.width = '0%';
+            }
+        }
+        
+        const statBoxes = document.querySelectorAll('.stat-box h3');
+        if (statBoxes && statBoxes.length >= 2) {
+            // 이번 주 등 정밀 로직보단 이번 달 기준 식비로 통일
+            statBoxes[0].innerText = appRecords.length === 0 ? '0일 기록 ☁️' : '기록 중 🔥'; 
+            statBoxes[1].innerText = `${(catTotals['식비/카페'] || 0).toLocaleString()}원`;
+        }
+        
         // 듀얼 모드 관점에 따른 통계 상단 요약 문구 분기 처리
         const analyticsSummary = document.getElementById('analytics-summary');
         let analyticsDenominator = totalBudget; // 기본 분모: 초기 설정 예산
@@ -460,12 +481,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // 아바타 모션 이펙트 (게이미피케이션)
-            avatar.style.transform = 'scale(1.2) rotate(10deg)';
-            setTimeout(() => {
-                avatar.style.transform = 'scale(1) rotate(0)';
-                avatar.src = `https://api.dicebear.com/7.x/bottts/svg?seed=Spender&backgroundColor=${isIncome ? 'e8f7ec' : 'FFB7B2'}`;
-            }, 300);
+            // 아바타 모션 이펙트 (게이미피케이션) - 널 체크 추가로 크래시 방어
+            if (typeof avatar !== 'undefined' && avatar) {
+                avatar.style.transform = 'scale(1.2) rotate(10deg)';
+                setTimeout(() => {
+                    avatar.style.transform = 'scale(1) rotate(0)';
+                    avatar.src = `https://api.dicebear.com/7.x/bottts/svg?seed=Spender&backgroundColor=${isIncome ? 'e8f7ec' : 'FFB7B2'}`;
+                }, 300);
+            }
 
             // 폼 초기화
             document.getElementById(amountId).value = '';
@@ -515,8 +538,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 모달 닫기 및 다이어리 뷰로 즉시 이동
         modal.classList.remove('open');
+        showToast("성공적으로 저장되었습니다!"); // 토스트 알림 송출
         navItems[0].click(); // 홈(대시보드) 탭 인덱스 0으로 복귀
     });
+    
+    // 토스트 알림 렌더 함수
+    function showToast(message) {
+        let toast = document.getElementById('toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast';
+            toast.className = 'toast hidden';
+            document.body.appendChild(toast);
+        }
+        toast.innerHTML = `<i class="ph ph-check-circle"></i> ${message}`;
+        toast.classList.remove('hidden');
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.classList.add('hidden'), 300);
+        }, 2000);
+    }
 
     const diaryList = document.getElementById('diary-list');
     

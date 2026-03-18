@@ -252,9 +252,9 @@ body {
 }
 .diary-actions-menu.show { opacity: 1; pointer-events: all; transform: translateY(0); }
 .action-btn {
-    background: transparent; border: none; padding: 8px 12px; font-size: 12px;
-    text-align: left; border-radius: 8px; color: var(--text-dark); cursor: pointer;
-    font-family: inherit; transition: background 0.2s;
+    background: transparent; border: none; padding: 6px 10px; font-size: 11px;
+    text-align: left; border-radius: 6px; color: var(--text-dark); cursor: pointer;
+    font-family: inherit; transition: background 0.2s; width: 100%;
 }
 .action-btn:active { background: rgba(157, 164, 180, 0.2); }
 .action-btn.delete-btn { color: #e63946; }
