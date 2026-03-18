@@ -254,27 +254,70 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.classList.remove('open');
     });
 
-    // ---- 4. OCR / AI Simulation (영수증 자동 스캔 로직 모의) ----
+    // ---- 4. 실제 영수증 AI 자동 스캔 (Tesseract.js OCR) ----
+    const ocrUploadBtn = document.getElementById('ocr-upload');
+    
+    // 버튼 클릭 시 숨겨진 input file 트리거
     ocrBtn.addEventListener('click', () => {
+        ocrUploadBtn.click();
+    });
+
+    ocrUploadBtn.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
         ocrBtn.classList.add('scanning');
-        ocrBtn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i><span>AI 영수증 분석 중...</span>';
+        ocrBtn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i><span>영수증 AI 분석 중... (최대 10초 대기)</span>';
         
-        // API 통신을 가정하여 1.5초 딜레이
-        setTimeout(() => {
+        try {
+            // Tesseract.js 한국어/영어 혼합 인식 실행
+            const result = await Tesseract.recognize(
+                file,
+                'kor+eng',
+                { logger: m => console.log(m) } // 콘솔에 진행상황 표시
+            );
+            
+            const text = result.data.text;
+            console.log("OCR Result:\n", text);
+
+            // 1. 결제 금액 파싱 (가장 큰 숫자 또는 '합계', '승인금액' 주변 원/숫자 탐색 정규식)
+            // 우선 가장 간단히 ,가 포함된 숫자 뭉치 중 1000 이상인 가장 큰 값을 금액으로 추정
+            const numberRegex = /[0-9]{1,3}(,[0-9]{3})+/g;
+            const matches = text.match(numberRegex);
+            let estimatedAmount = 0;
+            if(matches) {
+                const numbers = matches.map(n => Number(n.replace(/,/g, '')));
+                estimatedAmount = Math.max(...numbers);
+            }
+
+            // 2. 상호명 (맨 첫 줄 또는 대표 텍스트) 추정
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+            let estimatedTitle = "인식된 상호명 없음 (직접 입력)";
+            if(lines.length > 0) {
+                // 보통 영수증 최상단에 상호명이 옴
+                estimatedTitle = lines[0]; 
+            }
+
+            // 뷰에 반영
+            if(estimatedAmount > 0) document.getElementById('amount-input').value = estimatedAmount;
+            document.getElementById('title-input').value = estimatedTitle.substring(0, 15); // 너무 길면 자름
+            document.getElementById('expense-memo-input').value = 'AI 카메라 스캔 완료 📸';
+
+            ocrBtn.innerHTML = '<i class="ph ph-check-circle" style="color:var(--success)"></i><span>스캔 성공!</span>';
+        } catch (err) {
+            console.error("OCR Error:", err);
+            alert("영수증을 읽는 중 오류가 발생했습니다. 글씨가 잘 보이게 다시 찍어주세요.");
+            ocrBtn.innerHTML = '<i class="ph ph-warning-circle" style="color:#e63946"></i><span>인식 실패</span>';
+        } finally {
             ocrBtn.classList.remove('scanning');
-            ocrBtn.innerHTML = '<i class="ph ph-check-circle" style="color:var(--success)"></i><span>스캔 완료!</span>';
-            
-            // 모의 데이터 폼 자동 채우기
-            document.getElementById('amount-input').value = 4500;
-            document.getElementById('title-input').value = '스타벅스';
-            document.getElementById('category-input').value = '식비/카페';
-            document.getElementById('expense-memo-input').value = '오후 업무 중 시원한 아이스 아메리카노 ☕';
-            
-            // 2초 뒤 버튼 원래 상태로 복구
+            // 3초 뒤 기본 버튼으로 복귀
             setTimeout(() => {
-                ocrBtn.innerHTML = '<i class="ph ph-camera"></i><span>영수증 스캔 (AI 자동입력)</span>';
-            }, 2000);
-        }, 1500);
+                ocrBtn.innerHTML = '<i class="ph ph-camera"></i><span>영수증 촬영 자동 스캔</span>';
+            }, 3000);
+            
+            // value 초기화 (같은 파일 다시 올릴 때 대비)
+            ocrUploadBtn.value = '';
+        }
     });
 
     // ---- 5. Save & Update UI (지출/일기 저장 및 상태 업데이트) ----
@@ -353,35 +396,107 @@ document.addEventListener('DOMContentLoaded', () => {
     function addDiaryItem(title, amount, category, memo, icon='ph-receipt') {
         const div = document.createElement('div');
         div.className = 'diary-item';
+        div.dataset.amount = amount; // 스토리지 삭제 시 차트 복구를 위한 데이터
         div.innerHTML = `
             <div class="diary-icon"><i class="ph ${icon}"></i></div>
-            <div class="diary-content">
-                <div class="diary-header">
-                    <h4>${title}</h4>
-                    <span class="diary-amount">-${Number(amount).toLocaleString()}원</span>
+            <div class="diary-content" style="display:flex; justify-content:space-between; width:100%;">
+                <div style="flex:1;">
+                    <div class="diary-header" style="margin-bottom:0px;">
+                        <h4>${title}</h4>
+                    </div>
+                    <div class="diary-meta">${category} • 방금 전 <span class="diary-amount" style="margin-left:8px;">-${Number(amount).toLocaleString()}원</span></div>
+                    ${memo ? `<div class="diary-memo" style="margin-top:6px;">${memo}</div>` : ''}
                 </div>
-                <div class="diary-meta">${category} • 방금 전</div>
-                ${memo ? `<div class="diary-memo">${memo}</div>` : ''}
+                <!-- 점 3개 옵션 (수정/삭제) 메뉴 버튼 -->
+                <div style="position:relative;">
+                    <button class="kebab-btn"><i class="ph ph-dots-three-outline-vertical"></i></button>
+                    <div class="diary-actions-menu">
+                        <button class="action-btn delete-btn"><i class="ph ph-trash"></i> 삭제</button>
+                    </div>
+                </div>
             </div>
         `;
+        
+        bindKebabMenuEvents(div);
         diaryList.prepend(div);
     }
 
     function addJournalItem(date, emoji, memo) {
         const div = document.createElement('div');
         div.className = 'diary-item journal-type';
+        div.dataset.amount = 0; // 일기는 예산 차감/복구에 영향 없음
         div.innerHTML = `
-            <div class="journal-header">
-                <span class="journal-emoji">${emoji}</span>
-                <div>
-                    <h4>하루의 일상 기록</h4>
-                    <div class="diary-meta">${date}</div>
+            <div class="diary-content" style="display:flex; justify-content:space-between; width:100%;">
+                <div style="flex:1;">
+                    <div class="journal-header" style="margin-bottom:4px;">
+                        <span class="journal-emoji">${emoji}</span>
+                        <div>
+                            <h4>하루의 일상 기록</h4>
+                            <div class="diary-meta">${date}</div>
+                        </div>
+                    </div>
+                    <div class="diary-memo">${memo}</div>
+                </div>
+                <!-- 일기용 케밥 메뉴 -->
+                <div style="position:relative;">
+                    <button class="kebab-btn"><i class="ph ph-dots-three-outline-vertical"></i></button>
+                    <div class="diary-actions-menu">
+                        <button class="action-btn delete-btn"><i class="ph ph-trash"></i> 삭제</button>
+                    </div>
                 </div>
             </div>
-            <div class="diary-memo">${memo}</div>
         `;
+        
+        bindKebabMenuEvents(div);
         diaryList.prepend(div);
     }
+    
+    // 점 3개 누르면 메뉴 열리기 & 타겟 삭제 로직 바인딩
+    function bindKebabMenuEvents(itemDiv) {
+        const kebabBtn = itemDiv.querySelector('.kebab-btn');
+        const actionMenu = itemDiv.querySelector('.diary-actions-menu');
+        const deleteBtn = itemDiv.querySelector('.delete-btn');
+        
+        // 1. 메뉴 토글
+        kebabBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 중복 클릭 이벤트 방지
+            const isShowing = actionMenu.classList.contains('show');
+            // 다른 열려있는 모든 메뉴 닫기
+            document.querySelectorAll('.diary-actions-menu').forEach(m => m.classList.remove('show'));
+            if (!isShowing) actionMenu.classList.add('show');
+        });
+
+        // 2. 삭제 엑션 버튼 클릭 시
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if(!confirm("이 기록을 삭제하시겠습니까?")) return;
+            
+            const amountToRestore = Number(itemDiv.dataset.amount) || 0;
+            
+            if(amountToRestore > 0) {
+                // 상단 홈 예산 숫자 복구(차감액 되돌리기)
+                const currentAmtStr = document.getElementById('spent-amount').innerText.replace(/[^0-9]/g, '');
+                const currentAmtNum = Number(currentAmtStr);
+                const restoredAmt = currentAmtNum + amountToRestore; // 다시 예산 잔액이 늘어남
+                
+                document.getElementById('spent-amount').innerText = restoredAmt.toLocaleString() + '원';
+                
+                // 도넛 차트 퍼센티지 복구(시뮬레이션: 잔액이 늘어나므로 퍼센트 상승 효과)
+                const currentPercentage = chartOptions.series[0];
+                const newPercentage = Math.min(100, (currentPercentage + 0.22).toFixed(1)); 
+                budgetChart.updateSeries([newPercentage]);
+            }
+            
+            // 화면에서 요소 물리적 제거
+            itemDiv.style.opacity = '0';
+            setTimeout(() => { itemDiv.remove(); }, 300);
+        });
+    }
+
+    // 바깥 여백 누르면 열려있는 메뉴 닫기
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.diary-actions-menu').forEach(m => m.classList.remove('show'));
+    });
 
     // 카테고리별 아이콘 매퍼
     function getCategoryIcon(cat) {
@@ -584,4 +699,23 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(`예산이 ${newBudget.toLocaleString()}원으로 성공적으로 저장되었습니다! 홈 탭에서 확인해보세요.`);
         navItems[0].click(); // 홈으로 이동
     });
+
+    // ---- 8. 모든 데이터 물리적 초기화 및 앱 리셋 ----
+    const resetAllBtn = document.getElementById('reset-all-btn');
+    if(resetAllBtn) {
+        resetAllBtn.addEventListener('click', () => {
+            const isConfirm = confirm("경고: 기기에 저장된 모든 예산, 이름, 가계부 및 일기 내역이 영구적으로 파기됩니다. 정말 초기화하시겠습니까?");
+            if (isConfirm) {
+                // LocalStorage 핵심값 파기
+                localStorage.removeItem('smartAccountUserData');
+                // 만약 추후 내역 배열을 로컬스토리지에 저장하는 코드가 있다면 아래에서 지우면 됩니다.
+                // localStorage.removeItem('smartAccountRecords');
+
+                alert("데이터가 깨끗하게 초기화되었습니다. 처음(온보딩) 페이지로 돌아갑니다.");
+                
+                // 강제 새로고침(F5)하여 처음부터 다시 접속한 것과 같은 상태 유발
+                window.location.reload();
+            }
+        });
+    }
 });
