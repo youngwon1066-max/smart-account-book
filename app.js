@@ -71,6 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(budgetInput) budgetInput.value = data.budget;
     }
 
+    // UTC 시차 문제를 해결하는 한국 시간 기준 ISO 날짜 구하기
+    function getLocalISODate() {
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        return (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
+    }
+
     // 앱 내의 모든 데이터(다이어리 리스트, 상단 차트, 통계)를 로컬스토리지 기반으로 100% 실시간 렌더링하는 핵심 동기화 엔진
     function syncAppRenders() {
         const totalBudget = userData ? userData.budget : 1000000;
@@ -80,29 +86,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (diaryList) diaryList.innerHTML = '';
         const sortedRecords = [...appRecords].sort((a,b) => b.id - a.id);
         sortedRecords.forEach(r => {
-            if(r.type === 'expense') addDiaryItem(r.id, r.title, r.amount, r.category, r.memo, getCategoryIcon(r.category), r.date);
+            if(r.type === 'expense' || r.type === 'income') addDiaryItem(r.id, r.title, r.amount, r.category, r.memo, getCategoryIcon(r.category), r.date, r.type);
             else addJournalItem(r.id, r.date, r.emoji, r.memo);
         });
 
-        // 2. 남은 예산 차트 렌더링을 위한 기간 필터
+        // 2. 남은 예산 차트 렌더링을 위한 기간 필터 (UTC 버그 해결 KST 문자열 파싱 버전)
         let expenseRecords = appRecords.filter(r => r.type === 'expense');
+        let incomeRecords = appRecords.filter(r => r.type === 'income');
         
-        // 하단 통계의 기간 설정(월별, 일별 등)에 맞게 지출 목록 필터링
+        // 하단 통계의 기간 설정(월별, 일별 등)에 맞게 목록 필터링
         if (typeof currentPeriodType !== 'undefined' && currentPeriodType) {
-            const now = new Date();
-            expenseRecords = expenseRecords.filter(r => {
-                const rDate = new Date(r.date);
-                if (currentPeriodType === 'day') return rDate.toDateString() === now.toDateString();
-                if (currentPeriodType === 'month') return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
-                if (currentPeriodType === 'quarter') return Math.floor(rDate.getMonth()/3) === Math.floor(now.getMonth()/3) && rDate.getFullYear() === now.getFullYear();
-                if (currentPeriodType === 'year') return rDate.getFullYear() === now.getFullYear();
-                return true; // week, etc fallback 
-            });
+            const todayStr = getLocalISODate();
+            const currentYear = todayStr.substring(0,4);
+            const currentMonth = todayStr.substring(5,7);
+            
+            const filterByPeriod = (r) => {
+                if(!r.date) return true;
+                const rYear = r.date.substring(0,4);
+                const rMonth = r.date.substring(5,7);
+                if (currentPeriodType === 'day') return r.date === todayStr;
+                if (currentPeriodType === 'month') return rYear === currentYear && rMonth === currentMonth;
+                if (currentPeriodType === 'quarter') return rYear === currentYear && Math.floor((parseInt(rMonth)-1)/3) === Math.floor((parseInt(currentMonth)-1)/3);
+                if (currentPeriodType === 'year') return rYear === currentYear;
+                return true; 
+            };
+            
+            expenseRecords = expenseRecords.filter(filterByPeriod);
+            incomeRecords = incomeRecords.filter(filterByPeriod);
         }
 
         const spent = expenseRecords.reduce((sum, r) => sum + r.amount, 0);
-        const remaining = Math.max(0, totalBudget - spent);
-        const percentage = totalBudget > 0 ? ((remaining / totalBudget) * 100).toFixed(1) : 0;
+        const earned = incomeRecords.reduce((sum, r) => sum + r.amount, 0);
+        
+        // 수입만큼 전체 한도 증액
+        const currentTotalBudget = totalBudget + earned; 
+        const remaining = Math.max(0, currentTotalBudget - spent);
+        const percentage = currentTotalBudget > 0 ? ((remaining / currentTotalBudget) * 100).toFixed(1) : 0;
         
         const chartSummary = document.querySelector('.chart-summary');
         if (chartSummary) chartSummary.innerHTML = `이달의 남은 예산<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong>`;
@@ -362,49 +381,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ---- 5. Save & Update UI (지출/일기 저장 및 상태 업데이트) ----
+    // ---- 5. Save & Update UI (지출/수입/일기 저장 및 상태 업데이트) ----
     saveBtn.addEventListener('click', () => {
         const isExpense = document.getElementById('tab-expense').classList.contains('active-area');
+        const isIncome = document.getElementById('tab-income').classList.contains('active-area');
 
-        if (isExpense) {
-            const amount = Number(document.getElementById('amount-input').value);
-            const title = document.getElementById('title-input').value;
-            const category = document.getElementById('category-input').value;
-            const memo = document.getElementById('expense-memo-input').value;
+        if (isExpense || isIncome) {
+            const type = isExpense ? 'expense' : 'income';
+            const amountId = isExpense ? 'amount-input' : 'income-amount-input';
+            const titleId = isExpense ? 'title-input' : 'income-title-input';
+            const catId = isExpense ? 'category-input' : 'income-category-input';
+            const memoId = isExpense ? 'expense-memo-input' : 'income-memo-input';
+            
+            const amount = Number(document.getElementById(amountId).value);
+            const title = document.getElementById(titleId).value;
+            const category = document.getElementById(catId).value;
+            const memo = document.getElementById(memoId).value;
             
             if(!amount || !title) {
-                alert('금액과 사용처를 입력해주세요.');
+                alert('금액과 내역명을 입력해주세요.');
                 return;
             }
 
             appRecords.push({
                 id: Date.now(),
-                type: 'expense',
+                type: type,
                 amount: amount,
                 title: title,
                 category: category,
                 memo: memo,
-                date: new Date().toISOString().split('T')[0]
+                date: getLocalISODate()
             });
 
             // 아바타 모션 이펙트 (게이미피케이션)
             avatar.style.transform = 'scale(1.2) rotate(10deg)';
             setTimeout(() => {
                 avatar.style.transform = 'scale(1) rotate(0)';
-                avatar.src = "https://api.dicebear.com/7.x/bottts/svg?seed=Spender&backgroundColor=FFB7B2";
+                avatar.src = `https://api.dicebear.com/7.x/bottts/svg?seed=Spender&backgroundColor=${isIncome ? 'e8f7ec' : 'FFB7B2'}`;
             }, 300);
 
             // 폼 초기화
-            document.getElementById('amount-input').value = '';
-            document.getElementById('title-input').value = '';
-            document.getElementById('expense-memo-input').value = '';
+            document.getElementById(amountId).value = '';
+            document.getElementById(titleId).value = '';
+            document.getElementById(memoId).value = '';
 
         } else {
             // 일기 모드 저장
             let date = document.getElementById('journal-date-input').value;
             if (!date) {
-                const today = new Date();
-                date = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+                date = getLocalISODate();
             }
             const memo = document.getElementById('journal-memo-input').value;
             
@@ -437,10 +462,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const diaryList = document.getElementById('diary-list');
     
-    function addDiaryItem(id, title, amount, category, memo, icon='ph-receipt', date='') {
+    function addDiaryItem(id, title, amount, category, memo, icon='ph-receipt', date='', type='expense') {
         const div = document.createElement('div');
         div.className = 'diary-item';
         div.dataset.recordId = id; // 스토리지 삭제 시 식별 키
+        
+        const typeClass = type === 'expense' ? 'expense' : 'income';
+        const sign = type === 'expense' ? '-' : '+';
+        
         div.innerHTML = `
             <div class="diary-icon"><i class="ph ${icon}"></i></div>
             <div class="diary-content" style="display:flex; justify-content:space-between; width:100%;">
@@ -448,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="diary-header" style="margin-bottom:0px;">
                         <h4>${title}</h4>
                     </div>
-                    <div class="diary-meta">${category} • ${date} <span class="diary-amount" style="margin-left:8px;">-${Number(amount).toLocaleString()}원</span></div>
+                    <div class="diary-meta">${category} • ${date} <span class="diary-amount ${typeClass}" style="margin-left:8px;">${sign}${Number(amount).toLocaleString()}원</span></div>
                     ${memo ? `<div class="diary-memo" style="margin-top:6px;">${memo}</div>` : ''}
                 </div>
                 <!-- 점 3개 옵션 (수정/삭제) 메뉴 버튼 -->
@@ -534,21 +563,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 카테고리별 아이콘 매퍼
     function getCategoryIcon(cat) {
-        if(cat.includes('식비') || cat.includes('카페')) return 'ph-coffee';
+        if(cat.includes('식비') || cat.includes('카페') || cat.includes('마트')) return 'ph-coffee';
         if(cat.includes('교통')) return 'ph-car';
         if(cat.includes('여가') || cat.includes('문화')) return 'ph-film-strip';
-        if(cat.includes('마트')) return 'ph-shopping-cart';
+        if(cat.includes('급여') || cat.includes('수입') || cat.includes('수익') || cat.includes('용돈')) return 'ph-piggy-bank';
         if(cat.includes('육아') || cat.includes('가족')) return 'ph-baby';
         return 'ph-receipt';
     }
 
-    // 초기 더미데이터 렌더링
-    dummyData.forEach(item => {
-        addDiaryItem(item.title, item.amount, item.category, item.memo, item.icon);
-    });
 
-    // 샘플 일기 데이터
-    addJournalItem('2026-03-17', '🥰', '드디어 고대하던 제주도 비행기 표를 예매했다. 가족여행 준비로 설레는 하루!');
 
     // ---- 6. Analytics (통계 화면) 로직 통합 ----
     const categoryChartOptions = {
@@ -669,28 +692,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---- 7. Settings (예산 설정) 로직 ----
-    const saveBudgetBtn = document.getElementById('save-budget-btn');
+    // ---- 7. Settings (예산 설정 자동저장으로 개편) ----
     const budgetInput = document.getElementById('budget-setting-input');
 
-    saveBudgetBtn.addEventListener('click', () => {
-        const newBudget = Number(budgetInput.value);
-        if (!newBudget || newBudget <= 0) {
-            alert('올바른 예산 금액을 입력하세요.');
-            return;
-        }
-        
-        // 임시 사용 금액(55만원) 기준으로 차트 재계산 연출
-        const spentAmount = 550000;
-        const remaining = Math.max(0, newBudget - spentAmount);
-        const percentage = ((remaining / newBudget) * 100).toFixed(1);
-        
-        budgetChart.updateSeries([parseFloat(percentage)]);
-        document.querySelector('.chart-summary').innerHTML = `설정된 예산 ${newBudget.toLocaleString()}원 중<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong> 남았습니다.`;
-        
-        alert(`예산이 ${newBudget.toLocaleString()}원으로 성공적으로 저장되었습니다! 홈 탭에서 확인해보세요.`);
-        navItems[0].click(); // 홈으로 이동
-    });
+    if (budgetInput) {
+        // change 이벤트로 값이 입력되고 포커스를 잃으면 즉시 자동저장 (저장버튼 삭제 크래시 수정)
+        budgetInput.addEventListener('change', () => {
+            const newBudget = Number(budgetInput.value);
+            if (!newBudget || newBudget <= 0) {
+                alert('올바른 예산 금액을 입력하세요.');
+                return;
+            }
+            
+            if(userData) {
+                userData.budget = newBudget;
+                localStorage.setItem('smartAccountUserData', JSON.stringify(userData));
+                syncAppRenders(); // 차트 데이터 즉각 동기화
+                alert(`한 달 목표 예산이 ${newBudget.toLocaleString()}원으로 자동 저장되었습니다!`);
+            }
+        });
+    }
 
     // ---- 8. 파스텔 테마(색상 스킨) 커스텀 로직 ----
     const themeBtns = document.querySelectorAll('.theme-btn');

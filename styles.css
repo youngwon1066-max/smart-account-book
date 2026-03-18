@@ -42,7 +42,7 @@ body.theme-gray {
 * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent;}
 body {
   font-family: 'Inter', -apple-system, sans-serif;
-  background-color: #f0f2f5;
+  background-color: var(--bg-color);
   color: var(--text-dark);
   display: flex;
   justify-content: center;
@@ -261,7 +261,8 @@ body {
 
 .journal-header { display: flex; align-items: center; gap: 8px; }
 .journal-emoji { font-size: 24px; padding: 6px; background: var(--bg-color); border-radius: 50%; box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light); }
-.diary-amount { font-weight: bold; color: var(--accent); }
+.diary-amount.expense { font-weight: bold; color: #e63946; } /* 지출 빨간색 */
+.diary-amount.income { font-weight: bold; color: #4361ee; } /* 수입 파란색 */
 .diary-meta { font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
 .diary-memo { font-size: 13px; line-height: 1.5; color: var(--text-dark); background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px;}
 
