@@ -83,8 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalBudget = userData ? userData.budget : 1000000;
         
         // 1. 다이어리 리스트 렌더링 (홈 탭)
-        const diaryList = document.getElementById('diary-list');
-        if (diaryList) diaryList.innerHTML = '';
+        const dList = document.getElementById('diary-list');
+        if (dList) dList.innerHTML = '';
         const sortedRecords = [...appRecords].sort((a,b) => b.id - a.id);
         sortedRecords.forEach(r => {
             if(r.type === 'expense' || r.type === 'income') addDiaryItem(r.id, r.title, r.amount, r.category, r.memo, getCategoryIcon(r.category), r.date, r.type);
@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasAnyAmount = series.some(v => v > 0);
         if (typeof categoryChart !== 'undefined' && categoryChart) {
             categoryChart.updateSeries(hasAnyAmount ? series : [0,0,0,0,0]);
+        }
         // 홈 대시보드 위젯(하드코딩된 더미) 실제 연동 처리
         const goalTitle = document.getElementById('home-target-goal');
         if (goalTitle) goalTitle.innerText = userData ? (userData.goal || '나만의 목표') : '나만의 특별한 목표';
@@ -562,6 +563,10 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => toast.classList.add('hidden'), 300);
         }, 2000);
     }
+    
+    // 글로벌 다이어리 리스트 (렌더링 컨테이너)
+    const diaryList = document.getElementById('diary-list');
+
     function addDiaryItem(id, title, amount, category, memo, icon='ph-receipt', date='', type='expense') {
         const div = document.createElement('div');
         div.className = 'diary-item';
