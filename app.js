@@ -3,8 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const onboardingView = document.getElementById('onboarding-view');
     const obNameInput = document.getElementById('ob-name');
     const obBudgetInput = document.getElementById('ob-budget');
-    const obGoalInput = document.getElementById('ob-goal');
     const obStartBtn = document.getElementById('ob-start-btn');
+    const obNameLabel = document.getElementById('ob-name-label');
+    const modeRadios = document.querySelectorAll('input[name="usageMode"]');
 
     const homeGreeting = document.getElementById('home-greeting');
     const homeGoalText = document.getElementById('home-goal-text');
@@ -21,13 +22,27 @@ document.addEventListener('DOMContentLoaded', () => {
         onboardingView.classList.add('hidden');
         applyUserData(userData);
     }
+    
+    // 온보딩 사용 모드 변경 시 이름 입력 라벨과 힌트 변경
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'shared') {
+                obNameLabel.innerText = "가족/모임 이름 (별명)";
+                obNameInput.placeholder = "예: 우리집, 신혼부부";
+            } else {
+                obNameLabel.innerText = "사용자 이름 (별명)";
+                obNameInput.placeholder = "예: 최고기획자, 자산왕";
+            }
+        });
+    });
 
     obStartBtn.addEventListener('click', () => {
+        const usageMode = document.querySelector('input[name="usageMode"]:checked').value;
         const name = obNameInput.value.trim() || '아무개';
         const budget = Number(obBudgetInput.value) || 1000000;
         const goal = obGoalInput.value.trim() || '오늘도 계획적인 하루를 보내볼까요?';
 
-        userData = { name, budget, goal };
+        userData = { usageMode, name, budget, goal };
         localStorage.setItem('smartAccountUserData', JSON.stringify(userData));
         
         onboardingView.classList.add('hidden');
@@ -38,9 +53,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function applyUserData(data) {
-        homeGreeting.innerText = `안녕하세요, ${data.name}님! 🌟`;
+        const mode = data.usageMode || 'single';
+        if (mode === 'shared') {
+            homeGreeting.innerHTML = `우리가족 <strong>${data.name}</strong> 가계부 👨‍👩‍👧`;
+            headerTitle.innerText = `${data.name} 가계부 😌`;
+        } else {
+            homeGreeting.innerHTML = `안녕하세요, <strong>${data.name}</strong>님! 🌟`;
+            headerTitle.innerText = `${data.name}의 가계부 😌`;
+        }
+        
         homeGoalText.innerText = data.goal;
-        headerTitle.innerText = `${data.name}의 가계부 😌`;
         
         // 설정 탭 입력창에도 기존 예산 반영
         const budgetInput = document.getElementById('budget-setting-input');

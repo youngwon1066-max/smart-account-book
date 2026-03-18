@@ -344,6 +344,24 @@ body {
 .onboarding-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--bg-color); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); margin-bottom: 16px;}
 .onboarding-header h2 { font-size: 22px; color: var(--text-dark); margin-bottom: 6px;}
 .onboarding-header p { font-size: 14px; color: var(--text-light); }
+
+/* Onboarding Toggle (단독/다중 선택) */
+.usage-toggle-container {
+  display: flex; gap: 12px; margin-bottom: 10px;
+}
+.usage-toggle-container input[type="radio"] { display: none; }
+.mode-label {
+  flex: 1; text-align: center; padding: 14px 10px; border-radius: 12px; font-size: 14px; font-weight: 600; 
+  color: var(--text-light); cursor: pointer; transition: all 0.3s;
+  background: var(--bg-color); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.mode-label i { font-size: 24px; }
+.usage-toggle-container input[type="radio"]:checked + .mode-label {
+  color: var(--primary);
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+}
+
 #ob-start-btn { margin-top: 10px; padding: 16px; font-size: 16px; }
 
 /* Animations */

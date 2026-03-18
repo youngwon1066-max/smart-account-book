@@ -21,8 +21,17 @@
                     <p>나만의 감성 가계부를 시작해볼까요?</p>
                 </div>
                 
+                <!-- 사용 모드 선택 토글 -->
+                <div class="usage-toggle-container">
+                    <input type="radio" id="mode-single" name="usageMode" value="single" checked>
+                    <label for="mode-single" class="mode-label"><i class="ph ph-user"></i> 나 혼자 쓰기</label>
+                    
+                    <input type="radio" id="mode-shared" name="usageMode" value="shared">
+                    <label for="mode-shared" class="mode-label"><i class="ph ph-users-three"></i> 가족·연인과 함께</label>
+                </div>
+                
                 <div class="input-group">
-                    <label>사용자 이름 (별명)</label>
+                    <label id="ob-name-label">사용자 이름 (별명)</label>
                     <input type="text" id="ob-name" class="neu-input" placeholder="예: 최고기획자, 우리집">
                 </div>
                 
