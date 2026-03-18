@@ -292,11 +292,17 @@ body {
   box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
   z-index: 1; transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
+
+/* 기간(5개) 탭 전용 슬라이더 */
 .five-tabs .toggle-slider { width: 20%; }
 .five-tabs #tab-week:checked ~ .toggle-slider { transform: translateX(100%); }
 .five-tabs #tab-month:checked ~ .toggle-slider { transform: translateX(200%); }
 .five-tabs #tab-quarter:checked ~ .toggle-slider { transform: translateX(300%); }
 .five-tabs #tab-year:checked ~ .toggle-slider { transform: translateX(400%); }
+
+/* 듀얼 모드(2개) 탭 전용 슬라이더 */
+.dual-mode-tabs .toggle-slider { width: 50%; }
+.dual-mode-tabs #mode-income:checked ~ .toggle-slider { transform: translateX(100%); }
 
 .analytics-list { display: flex; flex-direction: column; gap: 0; padding: 12px 20px; }
 .analytics-item-wrapper { padding: 8px 0; border-bottom: 1px solid rgba(157, 164, 180, 0.2); }

@@ -117,6 +117,19 @@
             <div id="view-analytics" class="view">
                 <h2 class="diary-title">우리 가족 소비 패턴 📊</h2>
                 
+                <!-- 예산 vs 수입 관점 토글 (Dual Mode) -->
+                <div class="neu-panel toggle-container" style="margin-bottom: 16px;">
+                    <div class="toggle-switch dual-mode-tabs">
+                        <input type="radio" id="mode-budget" name="analyticsMode" value="budget" checked>
+                        <label for="mode-budget">🎯 목표 예산 중심</label>
+
+                        <input type="radio" id="mode-income" name="analyticsMode" value="income">
+                        <label for="mode-income">💰 실제 수입 중심</label>
+
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
                 <!-- 날짜 기준 네비게이터 -->
                 <div class="period-navigator neu-panel">
                     <button class="nav-arrow text-btn" id="prev-period-btn"><i class="ph ph-caret-left"></i></button>
@@ -148,6 +161,9 @@
 
                 <!-- 카테고리별 도넛 차트 -->
                 <div class="neu-panel chart-panel">
+                    <p class="chart-summary" id="analytics-summary" style="margin-top: 10px; margin-bottom: -5px; line-height: 1.6;">
+                        <!-- JS에서 예산 대비/수입 대비 텍스트를 렌더링합니다 -->
+                    </p>
                     <div id="categoryChart"></div>
                 </div>
 

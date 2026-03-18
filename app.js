@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chartSummary) chartSummary.innerHTML = `이달의 남은 예산<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong>`;
         if (typeof budgetChart !== 'undefined' && budgetChart) budgetChart.updateSeries([parseFloat(percentage)]);
 
-        // 3. 통계 대시보드 렌더링
+        // 3. 통계 대시보드 (듀얼 모드) 렌더링
         const catTotals = { '식비/카페':0, '마트/장보기':0, '교통/차량':0, '문화/여가':0, '육아/가족':0 };
         expenseRecords.forEach(r => {
             if(catTotals[r.category] !== undefined) catTotals[r.category] += r.amount;
@@ -139,8 +139,27 @@ document.addEventListener('DOMContentLoaded', () => {
             categoryChart.updateSeries(hasAnyAmount ? series : [0,0,0,0,0]);
         }
         
+        // 듀얼 모드 관점에 따른 통계 상단 요약 문구 분기 처리
+        const analyticsSummary = document.getElementById('analytics-summary');
+        let analyticsDenominator = totalBudget; // 기본 분모: 초기 설정 예산
+        
+        if (typeof currentAnalyticsMode !== 'undefined' && currentAnalyticsMode === 'income') {
+             analyticsDenominator = earned; // 수입 모드 시 분모: 월 수입 총액
+        }
+
+        if (analyticsSummary) {
+            if (currentAnalyticsMode === 'budget') {
+                const usedPercent = totalBudget > 0 ? Math.round((spent/totalBudget)*100) : 0;
+                analyticsSummary.innerHTML = `설정 예산 ${totalBudget.toLocaleString()}원 대비<br><strong>${spent.toLocaleString()}원 (${usedPercent}%)</strong> 사용`;
+            } else {
+                const surplus = earned - spent;
+                const surplusHtml = surplus >= 0 ? `<span style="color:#4361ee">잔여 ${surplus.toLocaleString()}원</span>` : `<span style="color:#e63946">초과 ${Math.abs(surplus).toLocaleString()}원</span>`;
+                analyticsSummary.innerHTML = `번 돈 ${earned.toLocaleString()}원 중<br><strong>${spent.toLocaleString()}원 사용 (${surplusHtml})</strong>`;
+            }
+        }
+        
         if (typeof renderAnalyticsListReal === 'function') {
-            renderAnalyticsListReal(catTotals, expenseRecords);
+            renderAnalyticsListReal(catTotals, expenseRecords, analyticsDenominator);
         }
     }
 
@@ -604,29 +623,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryChart = new ApexCharts(document.querySelector("#categoryChart"), categoryChartOptions);
     categoryChart.render();
 
-    // 6.1 날짜 নে비게이터 및 5단계 필터 스위칭 로직
+    // 6.1 날짜 নে비게이터 및 통계 관점 스위칭 로직
     const periodLabel = document.getElementById('current-period-label');
     const periodRadios = document.querySelectorAll('input[name="period"]');
+    const modeRadiosAnalytics = document.querySelectorAll('input[name="analyticsMode"]');
     
     // 모의 기준 데이터 (현재)
     let currentPeriodType = 'month'; // day, week, month, quarter, year
+    let currentAnalyticsMode = 'budget'; // budget, income
     
     // 선택된 탭에 따라 상단 텍스트를 모의 변경하는 함수
     function updatePeriodLabelText(type) {
-        if(type === 'day') periodLabel.innerText = '2026년 3월 18일';
-        else if(type === 'week') periodLabel.innerText = '2026년 3월 3주차';
-        else if(type === 'month') periodLabel.innerText = '2026년 3월';
-        else if(type === 'quarter') periodLabel.innerText = '2026년 1분기';
-        else if(type === 'year') periodLabel.innerText = '2026년';
+        if(type === 'day') periodLabel.innerText = '오늘 하루';
+        else if(type === 'week') periodLabel.innerText = '이번 주간';
+        else if(type === 'month') periodLabel.innerText = '이번 달';
+        else if(type === 'quarter') periodLabel.innerText = '이번 분기';
+        else if(type === 'year') periodLabel.innerText = '올 한 해';
     }
 
     periodRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
             currentPeriodType = e.target.value;
             updatePeriodLabelText(currentPeriodType);
-            
-            // 기간 변경 시 화면 전체 데이터 실시간 동기화
             syncAppRenders();
+        });
+    });
+
+    modeRadiosAnalytics.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            currentAnalyticsMode = e.target.value;
+            syncAppRenders(); // 관점 전환 시 즉시 재렌더링
         });
     });
     
@@ -642,19 +668,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6.2 실제 로컬 데이터 기반 통계(아코디언) 렌더링
     const analyticsListArea = document.getElementById('analytics-list');
     
-    function renderAnalyticsListReal(catTotals, expenseRecords) {
+    function renderAnalyticsListReal(catTotals, expenseRecords, denominator = 1000000) {
         if (!analyticsListArea) return;
         analyticsListArea.innerHTML = '';
         const labels = Object.keys(catTotals);
         const icons = ['ph-coffee', 'ph-shopping-cart', 'ph-car', 'ph-film-strip', 'ph-baby'];
         const colors = ['#FFB7B2', '#B5EAD7', '#9BA4B5', '#E2F0CB', '#C7CEEA'];
         
-        const totalAll = Object.values(catTotals).reduce((sum,val)=>sum+val,0);
+        // 분모(Denominator)가 0인 경우 방어 로직
+        const safeDenominator = denominator > 0 ? denominator : 1;
 
         labels.forEach((catName, idx) => {
             const catAmount = catTotals[catName];
             if(catAmount === 0) return;
-            const catPercentage = Math.round((catAmount/totalAll)*100);
+            
+            // 선택된 기준(예산 vs 수입)에 따라 퍼센테이지 달라짐
+            const catPercentage = Math.round((catAmount/safeDenominator)*100);
 
             // 해당 카테고리에 속하는 실제 결제 내역 뽑기
             const catItems = expenseRecords.filter(r => r.category === catName).sort((a,b)=>b.id-a.id);
