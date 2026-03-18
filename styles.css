@@ -1,18 +1,45 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* 뉴모피즘 베이스 및 파스텔 톤 팔레트 */
-  --bg-color: #E0E5EC;
-  --text-dark: #4A4E69;
-  --text-light: #9DA4B4;
-  --primary: #9BA4B5; /* 파스텔 블루/그레이 */
-  --accent: #FFB7B2; /* 파스텔 핑크 */
-  --success: #B5EAD7; /* 파스텔 민트 */
-  --shadow-light: rgba(255, 255, 255, 0.7);
-  --shadow-dark: rgba(163, 177, 198, 0.6);
+  --bg-color: #f0f2f5;
+  --primary: #FFB7B2; /* 파스텔 코랄/핑크 (포인트 컬러) */
+  --accent: #E2F0CB;  /* 파스텔 그린 */
+  --text-dark: #4a4e69;
+  --text-light: #9da4b4;
+  
+  /* 기본 화이트 테마 용 뉴모피즘 섀도우 베이스 */
+  --shadow-dark: #cdd1d8;
+  --shadow-light: #ffffff;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* --------- 동적 파스텔 스킨 테마 클래스 --------- */
+body.theme-pink {
+  --bg-color: #ffebf0;
+  --shadow-dark: #d9c8cc;
+  --shadow-light: #ffffff;
+}
+body.theme-mint {
+  --bg-color: #e8f7ec;
+  --shadow-dark: #c5d2c9;
+  --shadow-light: #ffffff;
+}
+body.theme-sky {
+  --bg-color: #ebf4fa;
+  --shadow-dark: #c8cfd5;
+  --shadow-light: #ffffff;
+}
+body.theme-lemon {
+  --bg-color: #fcf6d7;
+  --shadow-dark: #d6d1b7;
+  --shadow-light: #ffffff;
+}
+body.theme-gray {
+  --bg-color: #e0e2e6;
+  --shadow-dark: #bec0c4;
+  --shadow-light: #f0f3f7;
+}
+
+* { box-sizing: border-box; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent;}
 body {
   font-family: 'Inter', -apple-system, sans-serif;
   background-color: #f0f2f5;
@@ -296,11 +323,35 @@ body {
 .detail-date { color: var(--text-light); font-size: 10px;}
 .detail-amt { color: var(--text-dark); font-weight: 600; }
 
+/* Settings Tab */
+.setting-panel { margin-bottom: 20px; padding: 20px; }
+.setting-item { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.setting-item:last-child { border-bottom: none; }
+.setting-item i { color: var(--text-light); font-size: 20px; }
+.budget-setting { background: transparent; border: none; font-size: 18px; color: var(--text-dark); text-align: right; outline: none; width: 120px; font-weight: bold; }
+
+/* Theme Palette */
+.theme-palette { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.theme-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+.theme-btn.active {
+    box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2), inset -2px -2px 5px rgba(255,255,255,0.7);
+    transform: scale(0.9);
+}
+.theme-btn.active::after {
+    content: "✓"; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); color: var(--text-dark);
+    font-size: 16px; font-weight: bold; opacity: 0.6;
+}
+
 /* Settings View */
 .setting-panel { margin-bottom: 20px; }
 .setting-panel h3 { font-size: 16px; margin-bottom: 6px; }
 .setting-desc { font-size: 12px; color: var(--text-light); margin-bottom: 16px; line-height: 1.4; }
-.setting-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.3); border-radius: 10px; margin-bottom: 10px; font-size: 14px; }
 .setting-item i { font-size: 18px; color: var(--primary); cursor: pointer; }
 
 /* Bottom Nav */

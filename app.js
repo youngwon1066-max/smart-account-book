@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 내부 저장소에서 유저 정보 확인
     let userData = JSON.parse(localStorage.getItem('smartAccountUserData'));
+    let appRecords = JSON.parse(localStorage.getItem('smartAccountRecords')) || [];
 
     if (!userData) {
         // 첫 접속 시: 온보딩 화면 표시 유지
@@ -49,8 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
         onboardingView.classList.add('hidden');
         applyUserData(userData);
         
-        // 홈 화면 업데이트를 위해 차트 재계산 트리거
-        updateBudgetChartBase(budget);
+        // 홈 화면 업데이트를 위해 차트 재계산 트리거 (전역 동기화 엔진)
+        syncAppRenders();
     });
 
     function applyUserData(data) {
@@ -70,16 +71,57 @@ document.addEventListener('DOMContentLoaded', () => {
         if(budgetInput) budgetInput.value = data.budget;
     }
 
-    // 초기 예산 베이스 설정을 위한 함수 (홈 화면 진입 시)
-    function updateBudgetChartBase(totalBudget) {
-        // 더미 사용액(55만원) 기준 백분율 계산 연출
-        const spent = 550000;
-        const remaining = Math.max(0, totalBudget - spent);
-        const percentage = ((remaining / totalBudget) * 100).toFixed(1);
+    // 앱 내의 모든 데이터(다이어리 리스트, 상단 차트, 통계)를 로컬스토리지 기반으로 100% 실시간 렌더링하는 핵심 동기화 엔진
+    function syncAppRenders() {
+        const totalBudget = userData ? userData.budget : 1000000;
         
-        document.querySelector('.chart-summary').innerHTML = `이달의 남은 예산<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong>`;
-        if (budgetChart) {
-            budgetChart.updateSeries([parseFloat(percentage)]);
+        // 1. 다이어리 리스트 렌더링 (홈 탭)
+        const diaryList = document.getElementById('diary-list');
+        if (diaryList) diaryList.innerHTML = '';
+        const sortedRecords = [...appRecords].sort((a,b) => b.id - a.id);
+        sortedRecords.forEach(r => {
+            if(r.type === 'expense') addDiaryItem(r.id, r.title, r.amount, r.category, r.memo, getCategoryIcon(r.category), r.date);
+            else addJournalItem(r.id, r.date, r.emoji, r.memo);
+        });
+
+        // 2. 남은 예산 차트 렌더링을 위한 기간 필터
+        let expenseRecords = appRecords.filter(r => r.type === 'expense');
+        
+        // 하단 통계의 기간 설정(월별, 일별 등)에 맞게 지출 목록 필터링
+        if (typeof currentPeriodType !== 'undefined' && currentPeriodType) {
+            const now = new Date();
+            expenseRecords = expenseRecords.filter(r => {
+                const rDate = new Date(r.date);
+                if (currentPeriodType === 'day') return rDate.toDateString() === now.toDateString();
+                if (currentPeriodType === 'month') return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
+                if (currentPeriodType === 'quarter') return Math.floor(rDate.getMonth()/3) === Math.floor(now.getMonth()/3) && rDate.getFullYear() === now.getFullYear();
+                if (currentPeriodType === 'year') return rDate.getFullYear() === now.getFullYear();
+                return true; // week, etc fallback 
+            });
+        }
+
+        const spent = expenseRecords.reduce((sum, r) => sum + r.amount, 0);
+        const remaining = Math.max(0, totalBudget - spent);
+        const percentage = totalBudget > 0 ? ((remaining / totalBudget) * 100).toFixed(1) : 0;
+        
+        const chartSummary = document.querySelector('.chart-summary');
+        if (chartSummary) chartSummary.innerHTML = `이달의 남은 예산<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong>`;
+        if (typeof budgetChart !== 'undefined' && budgetChart) budgetChart.updateSeries([parseFloat(percentage)]);
+
+        // 3. 통계 대시보드 렌더링
+        const catTotals = { '식비/카페':0, '마트/장보기':0, '교통/차량':0, '문화/여가':0, '육아/가족':0 };
+        expenseRecords.forEach(r => {
+            if(catTotals[r.category] !== undefined) catTotals[r.category] += r.amount;
+        });
+        const series = Object.values(catTotals);
+        
+        const hasAnyAmount = series.some(v => v > 0);
+        if (typeof categoryChart !== 'undefined' && categoryChart) {
+            categoryChart.updateSeries(hasAnyAmount ? series : [0,0,0,0,0]);
+        }
+        
+        if (typeof renderAnalyticsListReal === 'function') {
+            renderAnalyticsListReal(catTotals, expenseRecords);
         }
     }
 
@@ -325,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isExpense = document.getElementById('tab-expense').classList.contains('active-area');
 
         if (isExpense) {
-            const amount = document.getElementById('amount-input').value;
+            const amount = Number(document.getElementById('amount-input').value);
             const title = document.getElementById('title-input').value;
             const category = document.getElementById('category-input').value;
             const memo = document.getElementById('expense-memo-input').value;
@@ -335,21 +377,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 1. 다이어리(일기) 뷰에 지출 내역 추가
-            addDiaryItem(title, amount, category, memo, getCategoryIcon(category));
+            appRecords.push({
+                id: Date.now(),
+                type: 'expense',
+                amount: amount,
+                title: title,
+                category: category,
+                memo: memo,
+                date: new Date().toISOString().split('T')[0]
+            });
 
-            // 2. 홈 대시보드 차트 퍼센트 차감
-            // 임시 연출용 로직 (약 0.22% 차감)
-            const currentPercentage = chartOptions.series[0];
-            const newPercentage = Math.max(0, (currentPercentage - 0.22).toFixed(1)); 
-            budgetChart.updateSeries([newPercentage]);
-            
-            // 남은 금액 텍스트 동기화
-            const currentAmt = Number(document.getElementById('spent-amount').innerText.replace(/[^0-9]/g, ''));
-            const remainstAmt = currentAmt - Number(amount);
-            document.getElementById('spent-amount').innerText = remainstAmt.toLocaleString() + '원';
-
-            // 3. 아바타 모션 이펙트 (게이미피케이션)
+            // 아바타 모션 이펙트 (게이미피케이션)
             avatar.style.transform = 'scale(1.2) rotate(10deg)';
             setTimeout(() => {
                 avatar.style.transform = 'scale(1) rotate(0)';
@@ -375,28 +413,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            addJournalItem(date, selectedEmoji, memo);
+            appRecords.push({
+                id: Date.now(),
+                type: 'journal',
+                amount: 0,
+                title: '하루의 일상 기록',
+                emoji: selectedEmoji,
+                memo: memo,
+                date: date
+            });
             
             document.getElementById('journal-memo-input').value = '';
         }
+
+        // 통합 로컬스토리지 갱신 및 UI(차트/목록) 동기화
+        localStorage.setItem('smartAccountRecords', JSON.stringify(appRecords));
+        syncAppRenders();
 
         // 모달 닫기 및 다이어리 뷰로 즉시 이동
         modal.classList.remove('open');
         navItems[2].click(); // 일기 탭 인덱스 2
     });
 
-    // 더미 초기 다이어리 데이터
-    const dummyData = [
-        { title: '제주도 항공권 예약', amount: '250,000', category: '여행/여가', memo: '드디어 여름 휴가! 🏖️ 숙박만 남았다.', icon: 'ph-airplane' },
-        { title: '이마트 장보기', amount: '84,500', category: '마트/장보기', memo: '주말 저녁용 삼겹살과 신선한 야채들 🥦', icon: 'ph-shopping-cart' }
-    ];
-
     const diaryList = document.getElementById('diary-list');
     
-    function addDiaryItem(title, amount, category, memo, icon='ph-receipt') {
+    function addDiaryItem(id, title, amount, category, memo, icon='ph-receipt', date='') {
         const div = document.createElement('div');
         div.className = 'diary-item';
-        div.dataset.amount = amount; // 스토리지 삭제 시 차트 복구를 위한 데이터
+        div.dataset.recordId = id; // 스토리지 삭제 시 식별 키
         div.innerHTML = `
             <div class="diary-icon"><i class="ph ${icon}"></i></div>
             <div class="diary-content" style="display:flex; justify-content:space-between; width:100%;">
@@ -404,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="diary-header" style="margin-bottom:0px;">
                         <h4>${title}</h4>
                     </div>
-                    <div class="diary-meta">${category} • 방금 전 <span class="diary-amount" style="margin-left:8px;">-${Number(amount).toLocaleString()}원</span></div>
+                    <div class="diary-meta">${category} • ${date} <span class="diary-amount" style="margin-left:8px;">-${Number(amount).toLocaleString()}원</span></div>
                     ${memo ? `<div class="diary-memo" style="margin-top:6px;">${memo}</div>` : ''}
                 </div>
                 <!-- 점 3개 옵션 (수정/삭제) 메뉴 버튼 -->
@@ -418,13 +462,13 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         bindKebabMenuEvents(div);
-        diaryList.prepend(div);
+        diaryList.appendChild(div);
     }
 
-    function addJournalItem(date, emoji, memo) {
+    function addJournalItem(id, date, emoji, memo) {
         const div = document.createElement('div');
         div.className = 'diary-item journal-type';
-        div.dataset.amount = 0; // 일기는 예산 차감/복구에 영향 없음
+        div.dataset.recordId = id; 
         div.innerHTML = `
             <div class="diary-content" style="display:flex; justify-content:space-between; width:100%;">
                 <div style="flex:1;">
@@ -448,48 +492,38 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         bindKebabMenuEvents(div);
-        diaryList.prepend(div);
+        diaryList.appendChild(div);
     }
     
-    // 점 3개 누르면 메뉴 열리기 & 타겟 삭제 로직 바인딩
+    // 점 3개 누르면 메뉴 열리기 & 타겟 삭제 실제 로컬스토리지 삭제
     function bindKebabMenuEvents(itemDiv) {
         const kebabBtn = itemDiv.querySelector('.kebab-btn');
         const actionMenu = itemDiv.querySelector('.diary-actions-menu');
         const deleteBtn = itemDiv.querySelector('.delete-btn');
         
-        // 1. 메뉴 토글
         kebabBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // 중복 클릭 이벤트 방지
+            e.stopPropagation(); 
             const isShowing = actionMenu.classList.contains('show');
-            // 다른 열려있는 모든 메뉴 닫기
             document.querySelectorAll('.diary-actions-menu').forEach(m => m.classList.remove('show'));
             if (!isShowing) actionMenu.classList.add('show');
         });
 
-        // 2. 삭제 엑션 버튼 클릭 시
         deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if(!confirm("이 기록을 삭제하시겠습니까?")) return;
+            if(!confirm("이 기록을 완전히 삭제하시겠습니까? (예산 차트도 복구됩니다)")) return;
             
-            const amountToRestore = Number(itemDiv.dataset.amount) || 0;
+            const recordId = Number(itemDiv.dataset.recordId);
             
-            if(amountToRestore > 0) {
-                // 상단 홈 예산 숫자 복구(차감액 되돌리기)
-                const currentAmtStr = document.getElementById('spent-amount').innerText.replace(/[^0-9]/g, '');
-                const currentAmtNum = Number(currentAmtStr);
-                const restoredAmt = currentAmtNum + amountToRestore; // 다시 예산 잔액이 늘어남
-                
-                document.getElementById('spent-amount').innerText = restoredAmt.toLocaleString() + '원';
-                
-                // 도넛 차트 퍼센티지 복구(시뮬레이션: 잔액이 늘어나므로 퍼센트 상승 효과)
-                const currentPercentage = chartOptions.series[0];
-                const newPercentage = Math.min(100, (currentPercentage + 0.22).toFixed(1)); 
-                budgetChart.updateSeries([newPercentage]);
-            }
+            // 핵심: LocalStorage에서 파기 후 동기화
+            appRecords = appRecords.filter(r => r.id !== recordId);
+            localStorage.setItem('smartAccountRecords', JSON.stringify(appRecords));
             
-            // 화면에서 요소 물리적 제거
+            // 삭제 애니메이션 후 엔진 재가동
             itemDiv.style.opacity = '0';
-            setTimeout(() => { itemDiv.remove(); }, 300);
+            setTimeout(() => { 
+                itemDiv.remove();
+                syncAppRenders();
+            }, 300);
         });
     }
 
@@ -568,16 +602,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPeriodType = e.target.value;
             updatePeriodLabelText(currentPeriodType);
             
-            // 모의 데이터 차트 갱신
-            let newSeries;
-            if (currentPeriodType === 'day') newSeries = [60, 0, 40, 0, 0];
-            else if (currentPeriodType === 'week') newSeries = [40, 20, 15, 15, 10];
-            else if (currentPeriodType === 'month') newSeries = [35, 25, 20, 15, 5];
-            else if (currentPeriodType === 'quarter') newSeries = [30, 30, 20, 10, 10];
-            else newSeries = [25, 30, 20, 15, 10]; // year
-            
-            categoryChart.updateSeries(newSeries);
-            renderAnalyticsList(newSeries, currentPeriodType);
+            // 기간 변경 시 화면 전체 데이터 실시간 동기화
+            syncAppRenders();
         });
     });
     
@@ -590,53 +616,30 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { periodLabel.style.opacity = 1; }, 200);
     }
 
-    // 6.2 카테고리 상세 내역 렌더링 (아코디언 UI)
+    // 6.2 실제 로컬 데이터 기반 통계(아코디언) 렌더링
     const analyticsListArea = document.getElementById('analytics-list');
     
-    // 카테고리별 상세 더미 데이터 생성기
-    function getDummyDetailsForCategory(catName, ratio, baseMultiplier) {
-        const details = [];
-        const itemsCount = Math.max(1, Math.floor(ratio / 10)); // 비율에 따라 1~5개 생성
-        
-        let shops = [];
-        if(catName.includes('식비')) shops = ['스타벅스', '김밥천국', '배달의민족', '맥도날드', '동네카페'];
-        else if(catName.includes('마트')) shops = ['이마트', '홈플러스', '마켓컬리', 'GS25', 'CU'];
-        else if(catName.includes('교통')) shops = ['카카오T', '주유소', '지하철', '고속버스', '쏘카'];
-        else if(catName.includes('문화')) shops = ['CGV', '넷플릭스', '교보문고', '올리브영', '멜론'];
-        else shops = ['아기용품점', '키즈카페', '소아과', '장난감가게', '쿠팡'];
-        
-        for(let i=0; i<itemsCount; i++){
-            const day = Math.floor(Math.random() * 28) + 1;
-            const amt = Math.floor(Math.random() * (baseMultiplier/itemsCount) * 1.5) + 3000;
-            const shop = shops[Math.floor(Math.random() * shops.length)];
-            details.push({ date: `3월 ${day}일`, shop: shop, amount: amt });
-        }
-        return details.sort((a,b) => parseInt(b.date.replace(/[^0-9]/g,'')) - parseInt(a.date.replace(/[^0-9]/g,''))); // 최신순 정렬
-    }
-
-    function renderAnalyticsList(series, periodType) {
-        const labels = categoryChartOptions.labels;
-        const icons = ['ph-coffee', 'ph-shopping-cart', 'ph-car', 'ph-film-strip', 'ph-baby'];
-        const colors = categoryChartOptions.colors;
-        
-        let baseMultiplier = 16000;
-        if(periodType === 'quarter') baseMultiplier = 55000;
-        if(periodType === 'year') baseMultiplier = 200000;
-        
+    function renderAnalyticsListReal(catTotals, expenseRecords) {
+        if (!analyticsListArea) return;
         analyticsListArea.innerHTML = '';
+        const labels = Object.keys(catTotals);
+        const icons = ['ph-coffee', 'ph-shopping-cart', 'ph-car', 'ph-film-strip', 'ph-baby'];
+        const colors = ['#FFB7B2', '#B5EAD7', '#9BA4B5', '#E2F0CB', '#C7CEEA'];
         
-        series.forEach((val, idx) => {
-            if(val === 0) return;
-            const mockAmount = Math.floor((val * baseMultiplier)/1000)*1000; 
-            const catName = labels[idx];
-            
-            // 상세 내역 배열 생성
-            const details = getDummyDetailsForCategory(catName, val, mockAmount);
+        const totalAll = Object.values(catTotals).reduce((sum,val)=>sum+val,0);
+
+        labels.forEach((catName, idx) => {
+            const catAmount = catTotals[catName];
+            if(catAmount === 0) return;
+            const catPercentage = Math.round((catAmount/totalAll)*100);
+
+            // 해당 카테고리에 속하는 실제 결제 내역 뽑기
+            const catItems = expenseRecords.filter(r => r.category === catName).sort((a,b)=>b.id-a.id);
             let detailsHTML = '';
-            details.forEach(d => {
+            catItems.forEach(d => {
                 detailsHTML += `
                 <div class="detail-item">
-                    <div class="detail-shop"><i class="ph ${icons[idx]}" style="color:${colors[idx]}"></i><span>${d.shop}</span></div>
+                    <div class="detail-shop"><i class="ph ${icons[idx]}" style="color:${colors[idx]}"></i><span>${d.title}</span></div>
                     <div>
                         <span class="detail-date" style="margin-right:8px;">${d.date}</span>
                         <span class="detail-amt">${d.amount.toLocaleString()}원</span>
@@ -644,13 +647,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
             });
 
-            // 아코디언 래퍼 구성
             const wrapper = document.createElement('div');
             wrapper.className = 'analytics-item-wrapper';
             wrapper.innerHTML = `
                 <div class="analytics-item">
                     <div class="al-cat"><i class="ph ${icons[idx]}" style="color:${colors[idx]}"></i><span>${catName}</span></div>
-                    <div class="al-amt">${mockAmount.toLocaleString()}원 <span style="font-size:11px; color:var(--text-light); margin-left: 4px;">(${val}%)</span> <i class="ph ph-caret-down al-chevron" style="margin-left:4px;"></i></div>
+                    <div class="al-amt">${catAmount.toLocaleString()}원 <span style="font-size:11px; color:var(--text-light); margin-left: 4px;">(${catPercentage}%)</span> <i class="ph ph-caret-down al-chevron" style="margin-left:4px;"></i></div>
                 </div>
                 <div class="analytics-detail-container">
                     <div class="analytics-details neu-inset">
@@ -659,23 +661,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             
-            // 토글 이벤트 바인딩
             const header = wrapper.querySelector('.analytics-item');
             header.addEventListener('click', () => {
-                const isExpanded = wrapper.classList.contains('expanded');
-                // 기존 열린 것 닫기(선택)
-                // document.querySelectorAll('.analytics-item-wrapper').forEach(w => w.classList.remove('expanded'));
-                
-                if(!isExpanded) wrapper.classList.add('expanded');
-                else wrapper.classList.remove('expanded');
+                wrapper.classList.toggle('expanded');
             });
-            
             analyticsListArea.appendChild(wrapper);
         });
     }
-
-    // 초기 렌더링 (월별 기준)
-    renderAnalyticsList(categoryChartOptions.series, currentPeriodType);
 
     // ---- 7. Settings (예산 설정) 로직 ----
     const saveBudgetBtn = document.getElementById('save-budget-btn');
@@ -700,22 +692,55 @@ document.addEventListener('DOMContentLoaded', () => {
         navItems[0].click(); // 홈으로 이동
     });
 
-    // ---- 8. 모든 데이터 물리적 초기화 및 앱 리셋 ----
+    // ---- 8. 파스텔 테마(색상 스킨) 커스텀 로직 ----
+    const themeBtns = document.querySelectorAll('.theme-btn');
+    const savedTheme = localStorage.getItem('smartAccountTheme') || 'default';
+
+    // 초기 테마 로드 및 적용
+    applyTheme(savedTheme);
+
+    themeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const themeName = btn.getAttribute('data-theme');
+            applyTheme(themeName);
+            localStorage.setItem('smartAccountTheme', themeName);
+        });
+    });
+
+    function applyTheme(themeName) {
+        // 기존 테마 클래스 모두 제거
+        document.body.className = '';
+        if (themeName !== 'default') {
+            document.body.classList.add(`theme-${themeName}`);
+        }
+        
+        // 버튼 활성화 상태 표시 변경
+        themeBtns.forEach(b => b.classList.remove('active'));
+        const activeBtn = document.querySelector(`.theme-btn[data-theme="${themeName}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    // ---- 9. 모든 데이터 물리적 초기화 및 앱 리셋 ----
     const resetAllBtn = document.getElementById('reset-all-btn');
     if(resetAllBtn) {
         resetAllBtn.addEventListener('click', () => {
             const isConfirm = confirm("경고: 기기에 저장된 모든 예산, 이름, 가계부 및 일기 내역이 영구적으로 파기됩니다. 정말 초기화하시겠습니까?");
             if (isConfirm) {
-                // LocalStorage 핵심값 파기
+                // LocalStorage 완전 리셋
                 localStorage.removeItem('smartAccountUserData');
-                // 만약 추후 내역 배열을 로컬스토리지에 저장하는 코드가 있다면 아래에서 지우면 됩니다.
-                // localStorage.removeItem('smartAccountRecords');
+                localStorage.removeItem('smartAccountRecords');
+                localStorage.removeItem('smartAccountTheme'); // 스킨 설정도 초기화
 
                 alert("데이터가 깨끗하게 초기화되었습니다. 처음(온보딩) 페이지로 돌아갑니다.");
                 
-                // 강제 새로고침(F5)하여 처음부터 다시 접속한 것과 같은 상태 유발
+                // 엔진 재시동
                 window.location.reload();
             }
         });
+    }
+
+    // 파일 최하단에서, 앱 초기 구동 시 로컬 데이터를 기반으로 한 번 싹 그려줌 (초기 렌더러 가동)
+    if (userData) {
+        syncAppRenders();
     }
 });
