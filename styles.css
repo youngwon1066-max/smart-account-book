@@ -209,10 +209,10 @@ body {
 /* Diary & Journal List View */
 .diary-title { font-size: 18px; margin-bottom: 20px; color: var(--text-dark); }
 .diary-item {
-  display: flex; gap: 16px; padding: 16px;
-  border-radius: 20px; margin-bottom: 16px;
+  display: flex; gap: 12px; padding: 12px 14px;
+  border-radius: 16px; margin-bottom: 10px;
   background: var(--bg-color);
-  box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
   animation: slideIn 0.3s ease-out forwards;
 }
 /* 저널(일기 전용) 아이템 스타일 차별화 */
@@ -227,15 +227,15 @@ body {
 }
 
 .diary-icon {
-  width: 44px; height: 44px; flex-shrink: 0;
-  border-radius: 16px; display: flex; align-items: center; justify-content: center;
-  font-size: 24px; color: var(--primary);
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: var(--primary);
   background: var(--bg-color);
-  box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
 }
 .diary-content { flex: 1; position: relative; } /* 메뉴 기준점 */
-.diary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.diary-header h4 { font-size: 15px; }
+.diary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.diary-header h4 { font-size: 14px; margin: 0; }
 
 /* 케밥(점 3개) 버튼 & 드롭다운 액션 메뉴 */
 .kebab-btn { 
@@ -261,10 +261,10 @@ body {
 
 .journal-header { display: flex; align-items: center; gap: 8px; }
 .journal-emoji { font-size: 24px; padding: 6px; background: var(--bg-color); border-radius: 50%; box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light); }
-.diary-amount.expense { font-weight: bold; color: #e63946; } /* 지출 빨간색 */
-.diary-amount.income { font-weight: bold; color: #4361ee; } /* 수입 파란색 */
-.diary-meta { font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
-.diary-memo { font-size: 13px; line-height: 1.5; color: var(--text-dark); background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px;}
+.diary-amount.expense { font-weight: bold; color: #e63946; font-size: 14px; } /* 지출 빨간색 */
+.diary-amount.income { font-weight: bold; color: #4361ee; font-size: 14px; } /* 수입 파란색 */
+.diary-meta { font-size: 11px; color: var(--text-light); margin-bottom: 4px; }
+.diary-memo { font-size: 12px; line-height: 1.4; color: var(--text-dark); background: rgba(255,255,255,0.4); padding: 8px 12px; border-radius: 8px; margin-top: 4px; }
 
 /* Analytics View (통계) */
 .period-navigator { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; margin-bottom: 20px;}
@@ -310,7 +310,7 @@ body {
 .analytics-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; cursor: pointer; }
 .al-cat { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
 .al-cat i { font-size: 18px; }
-.al-amt { font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 6px;}
+.al-amt { font-size: 14px; font-weight: bold; color: #4361ee; display: flex; align-items: center; gap: 6px;}
 .al-chevron { font-size: 14px; color: var(--text-light); transition: transform 0.3s ease; }
 .analytics-item-wrapper.expanded .al-chevron { transform: rotate(180deg); }
 

@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 const surplus = earned - spent;
                 const surplusHtml = surplus >= 0 ? `<span style="color:#4361ee">잔여 ${surplus.toLocaleString()}원</span>` : `<span style="color:#e63946">초과 ${Math.abs(surplus).toLocaleString()}원</span>`;
-                analyticsSummary.innerHTML = `번 돈 ${earned.toLocaleString()}원 중<br><strong>${spent.toLocaleString()}원 사용 (${surplusHtml})</strong>`;
+                analyticsSummary.innerHTML = `번 돈 ${earned.toLocaleString()}원 중<br><strong style="color:#4361ee">${spent.toLocaleString()}원 사용</strong> (${surplusHtml})`;
             }
         }
         
@@ -290,6 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const fabBtn = document.getElementById('fab-btn');
     const modal = document.getElementById('entry-modal');
     const closeModal = document.getElementById('close-modal');
+    
+    let editingRecordId = null; // 현재 수정 중인 기록 ID 추적 변수
     const saveBtn = document.getElementById('save-btn');
     const ocrBtn = document.getElementById('ocr-btn');
     const avatar = document.getElementById('pet-avatar');
@@ -327,10 +329,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
 
     fabBtn.addEventListener('click', () => {
+        editingRecordId = null; // 새 글 쓰기 모드로 초기화
+        
+        // 폼 내용 비우기 로직
+        document.getElementById('amount-input').value = '';
+        document.getElementById('title-input').value = '';
+        document.getElementById('expense-memo-input').value = '';
+        document.getElementById('income-amount-input').value = '';
+        document.getElementById('income-title-input').value = '';
+        document.getElementById('income-memo-input').value = '';
+        document.getElementById('journal-memo-input').value = '';
+
         modal.classList.add('open');
     });
 
     closeModal.addEventListener('click', () => {
+        editingRecordId = null;
         modal.classList.remove('open');
     });
 
@@ -422,15 +436,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            appRecords.push({
-                id: Date.now(),
-                type: type,
-                amount: amount,
-                title: title,
-                category: category,
-                memo: memo,
-                date: getLocalISODate()
-            });
+            if (editingRecordId) {
+                // 기존 데이터 덮어쓰기 (수정 모드)
+                const targetIdx = appRecords.findIndex(r => r.id === editingRecordId);
+                if(targetIdx > -1) {
+                    appRecords[targetIdx] = { 
+                        ...appRecords[targetIdx], 
+                        type: type, amount: amount, title: title, category: category, memo: memo 
+                    };
+                }
+                editingRecordId = null;
+            } else {
+                // 신규 데이터 추가
+                appRecords.push({
+                    id: Date.now(),
+                    type: type,
+                    amount: amount,
+                    title: title,
+                    category: category,
+                    memo: memo,
+                    date: getLocalISODate()
+                });
+            }
 
             // 아바타 모션 이펙트 (게이미피케이션)
             avatar.style.transform = 'scale(1.2) rotate(10deg)';
@@ -457,15 +484,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            appRecords.push({
-                id: Date.now(),
-                type: 'journal',
-                amount: 0,
-                title: '하루의 일상 기록',
-                emoji: selectedEmoji,
-                memo: memo,
-                date: date
-            });
+            if (editingRecordId) {
+                const targetIdx = appRecords.findIndex(r => r.id === editingRecordId);
+                if(targetIdx > -1) {
+                    appRecords[targetIdx] = { 
+                        ...appRecords[targetIdx], 
+                        type: 'journal', date: date, emoji: selectedEmoji, memo: memo 
+                    };
+                }
+                editingRecordId = null;
+            } else {
+                appRecords.push({
+                    id: Date.now(),
+                    type: 'journal',
+                    amount: 0,
+                    title: '하루의 일상 기록',
+                    emoji: selectedEmoji,
+                    memo: memo,
+                    date: date
+                });
+            }
             
             document.getElementById('journal-memo-input').value = '';
         }
@@ -503,6 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="position:relative;">
                     <button class="kebab-btn"><i class="ph ph-dots-three-outline-vertical"></i></button>
                     <div class="diary-actions-menu">
+                        <button class="action-btn edit-btn"><i class="ph ph-pencil-simple"></i> 수정</button>
                         <button class="action-btn delete-btn"><i class="ph ph-trash"></i> 삭제</button>
                     </div>
                 </div>
@@ -533,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="position:relative;">
                     <button class="kebab-btn"><i class="ph ph-dots-three-outline-vertical"></i></button>
                     <div class="diary-actions-menu">
+                        <button class="action-btn edit-btn"><i class="ph ph-pencil-simple"></i> 수정</button>
                         <button class="action-btn delete-btn"><i class="ph ph-trash"></i> 삭제</button>
                     </div>
                 </div>
@@ -573,6 +613,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncAppRenders();
             }, 300);
         });
+
+        const editBtn = itemDiv.querySelector('.edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                const recordId = Number(itemDiv.dataset.recordId);
+                const record = appRecords.find(r => r.id === recordId);
+                if(record) {
+                    openEditModal(record);
+                }
+                actionMenu.classList.remove('show');
+            });
+        }
+    }
+
+    // 수정 시 팝업에 기존 값 자동 바인딩(채워넣기) 함수
+    function openEditModal(r) {
+        editingRecordId = r.id;
+        
+        // 모든 탭 초기화
+        document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.modal-form-area').forEach(a => a.classList.remove('active-area'));
+        
+        if (r.type === 'expense') {
+            document.querySelector('.modal-tab[data-tab="tab-expense"]').classList.add('active');
+            document.getElementById('tab-expense').classList.add('active-area');
+            document.getElementById('amount-input').value = r.amount;
+            document.getElementById('title-input').value = r.title;
+            document.getElementById('category-input').value = r.category || '기타';
+            document.getElementById('expense-memo-input').value = r.memo || '';
+        } else if (r.type === 'income') {
+            document.querySelector('.modal-tab[data-tab="tab-income"]').classList.add('active');
+            document.getElementById('tab-income').classList.add('active-area');
+            document.getElementById('income-amount-input').value = r.amount;
+            document.getElementById('income-title-input').value = r.title;
+            document.getElementById('income-category-input').value = r.category || '기타수입';
+            document.getElementById('income-memo-input').value = r.memo || '';
+        } else if (r.type === 'journal') {
+            document.querySelector('.modal-tab[data-tab="tab-journal"]').classList.add('active');
+            document.getElementById('tab-journal').classList.add('active-area');
+            document.getElementById('journal-date-input').value = r.date;
+            document.getElementById('journal-memo-input').value = r.memo || '';
+            document.querySelectorAll('.emoji-item').forEach(em => {
+                em.classList.remove('active');
+                if(em.dataset.emoji === r.emoji) {
+                    em.classList.add('active');
+                    selectedEmoji = r.emoji; // 저장용 전역 변수 동기화
+                }
+            });
+        }
+        modal.classList.add('open');
     }
 
     // 바깥 여백 누르면 열려있는 메뉴 닫기
