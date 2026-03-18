@@ -139,9 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasAnyAmount = series.some(v => v > 0);
         if (typeof categoryChart !== 'undefined' && categoryChart) {
             categoryChart.updateSeries(hasAnyAmount ? series : [0,0,0,0,0]);
-        }
-        
         // 홈 대시보드 위젯(하드코딩된 더미) 실제 연동 처리
+        const goalTitle = document.getElementById('home-target-goal');
+        if (goalTitle) goalTitle.innerText = userData ? (userData.goal || '나만의 목표') : '나만의 특별한 목표';
+
         const goalText = document.querySelector('.goal-text');
         const progressFill = document.querySelector('.progress-fill');
         if (goalText && progressFill) {
@@ -542,15 +543,17 @@ document.addEventListener('DOMContentLoaded', () => {
         navItems[0].click(); // 홈(대시보드) 탭 인덱스 0으로 복귀
     });
     
-    // 토스트 알림 렌더 함수
+    // 토스트 알림 렌더 함수 (앱 컨테이너 중앙 정렬 유지)
     function showToast(message) {
         let toast = document.getElementById('toast');
-        if (!toast) {
+        const appContainer = document.querySelector('.app-container');
+        if (!toast && appContainer) {
             toast = document.createElement('div');
             toast.id = 'toast';
             toast.className = 'toast hidden';
-            document.body.appendChild(toast);
+            appContainer.appendChild(toast);
         }
+        if(!toast) return;
         toast.innerHTML = `<i class="ph ph-check-circle"></i> ${message}`;
         toast.classList.remove('hidden');
         toast.classList.add('show');
@@ -559,9 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => toast.classList.add('hidden'), 300);
         }, 2000);
     }
-
-    const diaryList = document.getElementById('diary-list');
-    
     function addDiaryItem(id, title, amount, category, memo, icon='ph-receipt', date='', type='expense') {
         const div = document.createElement('div');
         div.className = 'diary-item';
