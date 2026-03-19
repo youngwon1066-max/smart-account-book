@@ -664,8 +664,20 @@ document.addEventListener('DOMContentLoaded', () => {
         kebabBtn.addEventListener('click', (e) => {
             e.stopPropagation(); 
             const isShowing = actionMenu.classList.contains('show');
-            document.querySelectorAll('.diary-actions-menu').forEach(m => m.classList.remove('show'));
-            if (!isShowing) actionMenu.classList.add('show');
+            
+            // 모든 메뉴 닫고 부모 z-index 초기화
+            document.querySelectorAll('.diary-actions-menu').forEach(m => {
+                m.classList.remove('show');
+                const parentItem = m.closest('.diary-item');
+                if (parentItem) parentItem.style.zIndex = '1';
+            });
+            
+            if (!isShowing) {
+                actionMenu.classList.add('show');
+                // 현재 클릭된 부모를 최상단으로 끌어올려 가림막 현상 방지
+                const currentItem = actionMenu.closest('.diary-item');
+                if (currentItem) currentItem.style.zIndex = '100';
+            }
         });
 
         deleteBtn.addEventListener('click', (e) => {
@@ -739,7 +751,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 바깥 여백 누르면 열려있는 메뉴 닫기
     document.addEventListener('click', () => {
-        document.querySelectorAll('.diary-actions-menu').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.diary-actions-menu').forEach(m => {
+            m.classList.remove('show');
+            const parentItem = m.closest('.diary-item');
+            if(parentItem) parentItem.style.zIndex = '1';
+        });
     });
 
     // 카테고리별 아이콘 매퍼 (레거시 과거 데이터 충돌 방지 로직 포함)
