@@ -186,7 +186,7 @@ body {
 
 .chart-panel h3 { font-size: 16px; margin-bottom: 5px; text-align: center; }
 .chart-summary { text-align: center; font-size: 14px; margin-top: -10px; line-height: 1.5; padding-bottom: 12px;}
-.chart-summary strong { color: var(--accent); font-size: 16px; }
+.chart-summary strong { color: #4361ee; font-size: 16px; }
 
 .goal-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
 .goal-header h3 { font-size: 15px; }

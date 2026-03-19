@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (analyticsSummary) {
             if (currentAnalyticsMode === 'budget') {
                 const usedPercent = totalBudget > 0 ? Math.round((spent/totalBudget)*100) : 0;
-                analyticsSummary.innerHTML = `설정 예산 ${totalBudget.toLocaleString()}원 대비<br><strong>${spent.toLocaleString()}원 (${usedPercent}%)</strong> 사용`;
+                analyticsSummary.innerHTML = `설정 예산 ${totalBudget.toLocaleString()}원 대비<br><strong style="color:#4361ee; font-size:18px;">${spent.toLocaleString()}원 (${usedPercent}%)</strong> 사용`;
             } else {
                 const surplus = earned - spent;
                 const surplusHtml = surplus >= 0 ? `<span style="color:#4361ee">잔여 ${surplus.toLocaleString()}원</span>` : `<span style="color:#e63946">초과 ${Math.abs(surplus).toLocaleString()}원</span>`;
