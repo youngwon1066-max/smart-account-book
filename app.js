@@ -782,7 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
         legend: { show: false }
     };
 
-    const categoryChart = new ApexCharts(document.querySelector("#categoryChart"), categoryChartOptions);
+    categoryChart = new ApexCharts(document.querySelector("#categoryChart"), categoryChartOptions);
     categoryChart.render();
 
     // 6.1 날짜 নে비게이터 및 통계 관점 스위칭 로직
