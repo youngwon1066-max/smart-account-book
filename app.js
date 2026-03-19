@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const obNameLabel = document.getElementById('ob-name-label');
     const modeRadios = document.querySelectorAll('input[name="usageMode"]');
 
+    const homeGreeting = document.getElementById('home-greeting');
     const homeGoalText = document.getElementById('home-goal-text');
     const headerTitle = document.getElementById('header-title');
 
