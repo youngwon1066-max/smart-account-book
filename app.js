@@ -8,9 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const obNameLabel = document.getElementById('ob-name-label');
     const modeRadios = document.querySelectorAll('input[name="usageMode"]');
 
-    const homeGreeting = document.getElementById('home-greeting');
     const homeGoalText = document.getElementById('home-goal-text');
     const headerTitle = document.getElementById('header-title');
+
+    // 글로벌 차트 인스턴스 (TDZ ReferenceError 방지용)
+    let budgetChart;
+    let categoryChart;
 
     // 내부 저장소에서 유저 정보 확인
     let userData = JSON.parse(localStorage.getItem('smartAccountUserData'));
@@ -146,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const chartSummary = document.querySelector('.chart-summary');
         if (chartSummary) chartSummary.innerHTML = `이달의 남은 예산<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong>`;
-        if (typeof budgetChart !== 'undefined' && budgetChart) budgetChart.updateSeries([parseFloat(usedPercentage)]);
+        if (budgetChart) budgetChart.updateSeries([parseFloat(usedPercentage)]);
 
         // 3. 통계 대시보드 (듀얼 모드) 렌더링
         const catTotals = { '식비/카페':0, '마트/장보기':0, '교통/차량':0, '문화/여가':0, '육아/가족':0 };
@@ -156,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const series = Object.values(catTotals);
         
         const hasAnyAmount = series.some(v => v > 0);
-        if (typeof categoryChart !== 'undefined' && categoryChart) {
+        if (categoryChart) {
             categoryChart.updateSeries(hasAnyAmount ? series : [0,0,0,0,0]);
         }
         // 홈 대시보드 위젯(하드코딩된 더미) 실제 연동 처리
@@ -327,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
         labels: ['예산 소진율'],
     };
 
-    const budgetChart = new ApexCharts(document.querySelector("#budgetChart"), chartOptions);
+    budgetChart = new ApexCharts(document.querySelector("#budgetChart"), chartOptions);
     budgetChart.render();
 
     // ---- 3. Modal & FAB & Tabs Logic (플로팅 버튼 및 모달 탭) ----
@@ -960,6 +963,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 엔진 재시동
                 window.location.reload();
             }
+        });
+    }
+
+    // ---- 10. 가족 공유 알림 활성화 (UI 페이크 액션) ----
+    const copyCodeBtnElement = document.querySelector('.setting-item i.ph-copy');
+    if(copyCodeBtnElement && copyCodeBtnElement.parentElement) {
+        copyCodeBtnElement.parentElement.style.cursor = 'pointer';
+        copyCodeBtnElement.parentElement.addEventListener('click', () => {
+            const familyCode = "FML-" + Math.floor(Math.random() * 10000) + "-SHR";
+            navigator.clipboard.writeText(familyCode).then(() => {
+                showToast(`가족 공유 초대 코드(${familyCode})가 복사되었습니다!`);
+            }).catch(() => {
+                showToast(`가족 초대 코드 복사 실패 (생성 코드: ${familyCode})`);
+            });
         });
     }
 
