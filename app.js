@@ -140,14 +140,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const spent = expenseRecords.reduce((sum, r) => sum + r.amount, 0);
         const earned = incomeRecords.reduce((sum, r) => sum + r.amount, 0);
         
-        // 수입만큼 전체 한도 증액
         const currentTotalBudget = totalBudget + earned; 
         const remaining = Math.max(0, currentTotalBudget - spent);
-        const percentage = currentTotalBudget > 0 ? ((remaining / currentTotalBudget) * 100).toFixed(1) : 0;
+        const usedPercentage = currentTotalBudget > 0 ? Math.min(100, ((spent / currentTotalBudget) * 100)).toFixed(1) : 0;
         
         const chartSummary = document.querySelector('.chart-summary');
         if (chartSummary) chartSummary.innerHTML = `이달의 남은 예산<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong>`;
-        if (typeof budgetChart !== 'undefined' && budgetChart) budgetChart.updateSeries([parseFloat(percentage)]);
+        if (typeof budgetChart !== 'undefined' && budgetChart) budgetChart.updateSeries([parseFloat(usedPercentage)]);
 
         // 3. 통계 대시보드 (듀얼 모드) 렌더링
         const catTotals = { '식비/카페':0, '마트/장보기':0, '교통/차량':0, '문화/여가':0, '육아/가족':0 };
@@ -325,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         stroke: { lineCap: 'round' },
         colors: ['#9BA4B5'],
-        labels: ['남은 예산'],
+        labels: ['예산 소진율'],
     };
 
     const budgetChart = new ApexCharts(document.querySelector("#budgetChart"), chartOptions);
