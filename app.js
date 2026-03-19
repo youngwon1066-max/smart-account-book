@@ -85,11 +85,31 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. 다이어리 리스트 렌더링 (홈 탭)
         const dList = document.getElementById('diary-list');
         if (dList) dList.innerHTML = '';
+        
+        // 추가: 감성일기 전용 리스트 렌더링 (일기 탭)
+        const jList = document.getElementById('journal-only-list');
+        if (jList) jList.innerHTML = '';
+
+        let expenseCount = 0;
+        let journalCount = 0;
+
         const sortedRecords = [...appRecords].sort((a,b) => b.id - a.id);
         sortedRecords.forEach(r => {
-            if(r.type === 'expense' || r.type === 'income') addDiaryItem(r.id, r.title, r.amount, r.category, r.memo, getCategoryIcon(r.category), r.date, r.type);
-            else addJournalItem(r.id, r.date, r.emoji, r.memo);
+            if(r.type === 'expense' || r.type === 'income') {
+                expenseCount++;
+                addDiaryItem(r.id, r.title, r.amount, r.category, r.memo, getCategoryIcon(r.category), r.date, r.type);
+            }
+            else if(r.type === 'journal') {
+                journalCount++;
+                addJournalItem(r.id, r.date, r.emoji, r.memo);
+            }
         });
+        
+        // 빈 상태(Empty State) 디자인 처리
+        const eEmptyState = document.getElementById('expense-empty-state');
+        if (eEmptyState) eEmptyState.style.display = expenseCount === 0 ? 'block' : 'none';
+        const jEmptyState = document.getElementById('journal-empty-state');
+        if (jEmptyState) jEmptyState.style.display = journalCount === 0 ? 'block' : 'none';
 
         // 2. 남은 예산 차트 렌더링을 위한 기간 필터 (UTC 버그 해결 KST 문자열 파싱 버전)
         let expenseRecords = appRecords.filter(r => r.type === 'expense');
@@ -628,7 +648,8 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         bindKebabMenuEvents(div);
-        diaryList.appendChild(div);
+        const jList = document.getElementById('journal-only-list');
+        if (jList) jList.appendChild(div);
     }
     
     // 점 3개 누르면 메뉴 열리기 & 타겟 삭제 실제 로컬스토리지 삭제
