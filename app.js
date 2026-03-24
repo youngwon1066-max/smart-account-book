@@ -182,8 +182,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const statBoxes = document.querySelectorAll('.stat-box h3');
         if (statBoxes && statBoxes.length >= 2) {
-            // 이번 주 등 정밀 로직보단 이번 달 기준 식비로 통일
-            statBoxes[0].innerText = appRecords.length === 0 ? '0일 기록 ☁️' : '기록 중 🔥'; 
+            // 연속 무지출 날 수 계산 (오늘부터 거슬러 지출 없는 날 카운트)
+            const expenseDates = new Set(appRecords.filter(r => r.type === 'expense' && r.date).map(r => r.date));
+            let streak = 0;
+            let chk = new Date();
+            for (let i = 0; i < 365; i++) {
+                const tz = chk.getTimezoneOffset() * 60000;
+                const ds = (new Date(chk.getTime() - tz)).toISOString().split('T')[0];
+                if (expenseDates.has(ds)) break;
+                streak++;
+                chk.setDate(chk.getDate() - 1);
+            }
+            statBoxes[0].innerText = streak > 0 ? `${streak}일 연속 ✨` : '오늘 지출 날 🔥';
             statBoxes[1].innerText = `${(catTotals['식비/카페'] || 0).toLocaleString()}원`;
         }
         
@@ -370,15 +380,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 앱 로드 시 게이미피케이션 프로그레스 바 애니메이션 적용
-    setTimeout(() => {
-        document.querySelector('.progress-fill').style.width = '65%';
-    }, 500);
-
     fabBtn.addEventListener('click', () => {
-        editingRecordId = null; // 새 글 쓰기 모드로 초기화
+        editingRecordId = null;
+        const today = getLocalISODate();
         
-        // 폼 내용 비우기 로직
+        // 폼 내용 비우기 클리어 로직
         document.getElementById('amount-input').value = '';
         document.getElementById('title-input').value = '';
         document.getElementById('expense-memo-input').value = '';
@@ -386,6 +392,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('income-title-input').value = '';
         document.getElementById('income-memo-input').value = '';
         document.getElementById('journal-memo-input').value = '';
+
+        // 오늘 날짜 자동 입력
+        const expDateEl = document.getElementById('expense-date-input');
+        const incDateEl = document.getElementById('income-date-input');
+        if (expDateEl) expDateEl.value = today;
+        if (incDateEl) incDateEl.value = today;
 
         modal.classList.add('open');
     });
@@ -495,6 +507,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 editingRecordId = null;
             } else {
                 // 신규 데이터 추가
+                const expDateEl = document.getElementById('expense-date-input');
+                const incDateEl = document.getElementById('income-date-input');
+                const recordDate = isExpense
+                    ? (expDateEl && expDateEl.value ? expDateEl.value : getLocalISODate())
+                    : (incDateEl && incDateEl.value ? incDateEl.value : getLocalISODate());
                 appRecords.push({
                     id: Date.now(),
                     type: type,
@@ -502,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: title,
                     category: category,
                     memo: memo,
-                    date: getLocalISODate()
+                    date: recordDate
                 });
             }
 
@@ -915,23 +932,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---- 7. Settings (예산 설정 자동저장으로 개편) ----
+    // ---- 7. Settings (예산 설정 저장 버튼 연동) ----
     const budgetInput = document.getElementById('budget-setting-input');
+    const saveBudgetBtn = document.getElementById('save-budget-btn');
 
-    if (budgetInput) {
-        // change 이벤트로 값이 입력되고 포커스를 잃으면 즉시 자동저장 (저장버튼 삭제 크래시 수정)
-        budgetInput.addEventListener('change', () => {
+    if (saveBudgetBtn && budgetInput) {
+        saveBudgetBtn.addEventListener('click', () => {
             const newBudget = Number(budgetInput.value);
             if (!newBudget || newBudget <= 0) {
-                alert('올바른 예산 금액을 입력하세요.');
+                showToast('올바른 예산 금액을 입력해주세요.');
                 return;
             }
-            
-            if(userData) {
+            if (userData) {
                 userData.budget = newBudget;
                 localStorage.setItem('smartAccountUserData', JSON.stringify(userData));
-                syncAppRenders(); // 차트 데이터 즉각 동기화
-                alert(`한 달 목표 예산이 ${newBudget.toLocaleString()}원으로 자동 저장되었습니다!`);
+                syncAppRenders(); // 홈 화면 차트 즉각 갱신
+                showToast(`예산이 ${newBudget.toLocaleString()}원으로 저장되었습니다!`);
+            }
+        });
+    }
+
+    // 기존 change 이벤트 (blur 시 자동저장) 도 유지
+    if (budgetInput) {
+        budgetInput.addEventListener('change', () => {
+            const newBudget = Number(budgetInput.value);
+            if (!newBudget || newBudget <= 0) return;
+            if (userData) {
+                userData.budget = newBudget;
+                localStorage.setItem('smartAccountUserData', JSON.stringify(userData));
+                syncAppRenders();
             }
         });
     }

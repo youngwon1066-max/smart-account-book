@@ -43,7 +43,7 @@
                     <input type="text" id="ob-goal" class="neu-input" placeholder="예: 이번 달은 배달음식 줄이기!">
                 </div>
 
-                <button id="ob-start-btn" class="neu-btn primary-btn"><i class="ph ph-rocket-launch"></i> 가계부 시작하기</button>
+                <button id="ob-start-btn" class="primary-btn" style="margin-top:8px;"><i class="ph ph-rocket-launch"></i> 가계부 시작하기</button>
             </div>
         </div>
 
@@ -88,7 +88,7 @@
                     <div class="progress-bar-container neu-inset">
                         <div class="progress-fill" style="width: 0%;"></div>
                     </div>
-                    <p class="goal-text">65% 달성! (1,300,000 / 2,000,000원)</p>
+                    <p class="goal-text"></p>
                 </div>
                 
                 <!-- 뱃지 및 통계 요약 (업적 시스템) -->
@@ -203,7 +203,7 @@
                         <label>총 예산 금액 (원)</label>
                         <input type="number" class="neu-input" id="budget-setting-input" placeholder="예: 2000000" value="2000000" />
                     </div>
-                    <button class="neu-button primary-btn" id="save-budget-btn">예산 저장하기</button>
+                    <button class="primary-btn" id="save-budget-btn" style="margin-top:4px;"><i class="ph ph-floppy-disk"></i> 예산 저장하기</button>
                 </div>
                 
                 <div class="neu-panel setting-panel">
@@ -296,6 +296,10 @@
                         <div class="divider">또는 직접 입력</div>
                         
                         <div class="input-group">
+                            <label>날짜</label>
+                            <input type="date" class="neu-input" id="expense-date-input" />
+                        </div>
+                        <div class="input-group">
                             <label>금액</label>
                             <input type="number" class="neu-input" id="amount-input" placeholder="0원" />
                         </div>
@@ -311,6 +315,9 @@
                                 <option value="교통/차량">교통/차량</option>
                                 <option value="문화/여가">문화/여가</option>
                                 <option value="육아/가족">육아/가족</option>
+                                <option value="의료/미용">의료/미용</option>
+                                <option value="교육/성장">교육/성장</option>
+                                <option value="기타/생활">기타/생활</option>
                             </select>
                         </div>
                         <div class="input-group">
@@ -322,8 +329,12 @@
                     <!-- 수입 기록 폼 -->
                     <div id="tab-income" class="modal-form-area">
                         <div class="input-group">
+                            <label>날짜</label>
+                            <input type="date" class="neu-input" id="income-date-input" />
+                        </div>
+                        <div class="input-group">
                             <label>수입 금액</label>
-                            <input type="number" class="neu-input" id="income-amount-input" placeholder="0원" style="color: #4361ee; font-weight: bold;" />
+                            <input type="number" class="neu-input" id="income-amount-input" placeholder="0원" />
                         </div>
                         <div class="input-group">
                             <label>수입처 (내역명)</label>
