@@ -217,7 +217,6 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.3; }
 .content-area::-webkit-scrollbar { display: none; }
 
 .view { display: none; }
-.view.active,
 .view.active-view {
   display: block;
   animation: fadeInUp 0.35s ease-out;
