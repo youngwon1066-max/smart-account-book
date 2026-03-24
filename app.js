@@ -932,6 +932,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ---- 6.3 Toast 알림 UI 함수 (동적 생성) ----
+    function showToast(message) {
+        let toastEl = document.getElementById('global-toast');
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.id = 'global-toast';
+            toastEl.className = 'toast';
+            document.body.appendChild(toastEl);
+        }
+        toastEl.innerHTML = `<i class="ph ph-info"></i><span>${message}</span>`;
+        toastEl.classList.remove('hidden', 'show');
+        void toastEl.offsetWidth; // 리플로우 강제 트리거
+        toastEl.classList.add('show');
+        
+        if (toastEl.hideTimeout) clearTimeout(toastEl.hideTimeout);
+        toastEl.hideTimeout = setTimeout(() => {
+            toastEl.classList.remove('show');
+        }, 2500);
+    }
+
     // ---- 7. Settings (예산 설정 저장 버튼 연동) ----
     const budgetInput = document.getElementById('budget-setting-input');
     const saveBudgetBtn = document.getElementById('save-budget-btn');

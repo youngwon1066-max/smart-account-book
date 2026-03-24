@@ -62,7 +62,9 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.3; }
 .app-container {
   width: 100%;
   max-width: 480px;
+  height: 100vh; /* Fallback for dvh */
   height: 100dvh;
+  max-height: 100vh;
   max-height: 100dvh;
   background: var(--bg-color);
   position: relative;
@@ -215,6 +217,11 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.3; }
 .content-area::-webkit-scrollbar { display: none; }
 
 .view { display: none; }
+.view.active,
+.view.active-view {
+  display: block;
+  animation: fadeInUp 0.35s ease-out;
+}
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
