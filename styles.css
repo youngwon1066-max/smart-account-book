@@ -926,21 +926,46 @@ textarea.neu-input { resize: none; }
     transform: translateX(-50%);
     width: calc(100% - 32px);
     max-width: 420px;
+    height: auto;
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 10px;
     padding: 12px 14px;
+    box-sizing: border-box;
     background: #f0f2f5;
     border-radius: 18px;
     box-shadow: 6px 6px 14px rgba(163, 177, 198, 0.45),
                 -6px -6px 14px rgba(255, 255, 255, 0.9);
     z-index: 9999;
 }
-.install-banner-icon { width: 40px; height: 40px; border-radius: 10px; flex: none; }
-.install-banner-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.35; flex: 1; }
-.install-banner-text strong { font-size: 14px; }
+.install-banner-icon { width: 40px; height: 40px; border-radius: 10px; flex: 0 0 auto; }
+.install-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+    line-height: 1.35;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+}
+.install-banner-text strong { font-size: 14px; white-space: nowrap; }
 .install-banner-text span { color: #8a93a5; }
-.install-banner-btn { padding: 8px 14px; font-size: 13px; border-radius: 12px; flex: none; }
+.install-banner-text strong,
+.install-banner-text span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.install-banner-btn {
+    width: auto !important;
+    flex: 0 0 auto;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    border-radius: 12px !important;
+}
 .install-banner-close {
     flex: none;
     border: none;
