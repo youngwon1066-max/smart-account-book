@@ -231,6 +231,15 @@
                     </div>
                 </div>
 
+                <div class="neu-panel setting-panel">
+                    <h3>데이터 관리 (백업 및 복원) 💾</h3>
+                    <p class="setting-desc">소중한 가계부 기록과 일기를 파일로 저장하거나, 저장해둔 파일로 복원할 수 있습니다.</p>
+                    <button class="neu-button primary-btn" id="backup-json-btn" style="width: 100%; margin-bottom: 10px;"><i class="ph ph-download-simple"></i> 📥 데이터 백업 (JSON 파일 다운로드)</button>
+                    <button class="neu-button" id="export-csv-btn" style="width: 100%; margin-bottom: 10px;"><i class="ph ph-file-xls"></i> 📊 소비/수입 내역 엑셀(CSV) 내보내기</button>
+                    <button class="neu-button" id="restore-json-btn" style="width: 100%;"><i class="ph ph-upload-simple"></i> 📤 백업 파일 복원 (JSON 파일 업로드)</button>
+                    <input type="file" id="restore-json-input" accept=".json,application/json" hidden />
+                </div>
+
                 <div class="neu-panel setting-panel" style="margin-top: 30px; background: rgba(255,183,178,0.15); border: 1px solid rgba(255,183,178,0.5);">
                     <h3 style="color: #e63946;">위험: 데이터 관리</h3>
                     <p class="setting-desc" style="color: #e63946;">저장된 모든 가계부 내역과 일기가 기기에서 완전히 삭제됩니다.</p>
@@ -383,6 +392,7 @@
                 </div>
             </div>
         </div>
+    </div><!-- /.app-container -->
 
     <!-- Tesseract.js 외부 라이브러리 추가 (브라우저 무료 OCR) -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>

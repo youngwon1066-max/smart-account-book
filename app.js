@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let appRecords = JSON.parse(localStorage.getItem('smartAccountRecords')) || [];
     let editingRecordId = null; // 새 글 저장 버그 방지용 (수정 기능) 전역 변수
 
+    // 통계 화면 기간/관점 상태 (전역)
+    let currentPeriodType = 'month'; // day, week, month, quarter, year, specific
+    let currentAnalyticsMode = 'budget'; // budget, income
+    let currentSpecificDate = null; // Date picker 선택 값 저장용
+    let currentPeriodAnchor = null; // 날짜 네비게이터 기준 날짜 (null이면 오늘), "YYYY-MM-DD"
+
     if (!userData) {
         // 첫 접속 시: 온보딩 화면 표시 유지
         onboardingView.classList.remove('hidden');
@@ -121,19 +127,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 하단 통계의 기간 설정(월별, 일별 등)에 맞게 목록 필터링
         if (typeof currentPeriodType !== 'undefined' && currentPeriodType) {
-            const todayStr = getLocalISODate();
-            const currentYear = todayStr.substring(0,4);
-            const currentMonth = todayStr.substring(5,7);
+            const anchorStr = currentPeriodAnchor || getLocalISODate();
+            const anchorYear = anchorStr.substring(0,4);
+            const anchorMonth = anchorStr.substring(5,7);
             
             const filterByPeriod = (r) => {
                 if(!r.date) return true;
                 const rYear = r.date.substring(0,4);
                 const rMonth = r.date.substring(5,7);
-                if (currentPeriodType === 'day') return r.date === todayStr;
-                if (currentPeriodType === 'month') return rYear === currentYear && rMonth === currentMonth;
-                if (currentPeriodType === 'quarter') return rYear === currentYear && Math.floor((parseInt(rMonth)-1)/3) === Math.floor((parseInt(currentMonth)-1)/3);
-                if (currentPeriodType === 'year') return rYear === currentYear;
-                if (currentPeriodType === 'specific') return r.date === currentSpecificDate; // 특정일 조회 추가
+                if (currentPeriodType === 'day') return r.date === anchorStr;
+                if (currentPeriodType === 'specific') return r.date === (currentSpecificDate || anchorStr); // 특정일 조회
+                if (currentPeriodType === 'week') {
+                    // 해당 날짜가 속한 월~일 주간 범위 필터
+                    const wk = getWeekRange(anchorStr);
+                    return r.date >= wk.start && r.date <= wk.end;
+                }
+                if (currentPeriodType === 'month') return rYear === anchorYear && rMonth === anchorMonth;
+                if (currentPeriodType === 'quarter') return rYear === anchorYear && Math.floor((parseInt(rMonth)-1)/3) === Math.floor((parseInt(anchorMonth)-1)/3);
+                if (currentPeriodType === 'year') return rYear === anchorYear;
                 return true; 
             };
             
@@ -152,8 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chartSummary) chartSummary.innerHTML = `이달의 남은 예산<br><strong id="spent-amount">${remaining.toLocaleString()}원</strong>`;
         if (budgetChart) budgetChart.updateSeries([parseFloat(usedPercentage)]);
 
-        // 3. 통계 대시보드 (듀얼 모드) 렌더링
-        const catTotals = { '식비/카페':0, '마트/장보기':0, '교통/차량':0, '문화/여가':0, '육아/가족':0 };
+        // 3. 통계 대시보드 (듀얼 모드) 렌더링 - 8개 카테고리 전체 지원
+        const catTotals = { '식비/카페':0, '마트/장보기':0, '교통/차량':0, '문화/여가':0, '육아/가족':0, '의료/미용':0, '교육/성장':0, '기타/생활':0 };
         expenseRecords.forEach(r => {
             if(catTotals[r.category] !== undefined) catTotals[r.category] += r.amount;
         });
@@ -161,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const hasAnyAmount = series.some(v => v > 0);
         if (categoryChart) {
-            categoryChart.updateSeries(hasAnyAmount ? series : [0,0,0,0,0]);
+            categoryChart.updateSeries(hasAnyAmount ? series : [0,0,0,0,0,0,0,0]);
         }
         // 홈 대시보드 위젯(하드코딩된 더미) 실제 연동 처리
         const goalTitle = document.getElementById('home-target-goal');
@@ -778,11 +789,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 카테고리별 아이콘 매퍼 (레거시 과거 데이터 충돌 방지 로직 포함)
     function getCategoryIcon(cat) {
         if (!cat || typeof cat !== 'string') return 'ph-receipt'; // 방어 로직: 과거 category 없는 데이터 호환 
-        if(cat.includes('식비') || cat.includes('카페') || cat.includes('마트')) return 'ph-coffee';
-        if(cat.includes('교통')) return 'ph-car';
+        if(cat.includes('식비') || cat.includes('카페')) return 'ph-coffee';
+        if(cat.includes('마트') || cat.includes('장보기')) return 'ph-shopping-cart';
+        if(cat.includes('교통') || cat.includes('차량')) return 'ph-car';
         if(cat.includes('여가') || cat.includes('문화')) return 'ph-film-strip';
-        if(cat.includes('급여') || cat.includes('수입') || cat.includes('수익') || cat.includes('용돈')) return 'ph-piggy-bank';
         if(cat.includes('육아') || cat.includes('가족')) return 'ph-baby';
+        if(cat.includes('의료') || cat.includes('미용') || cat.includes('병원') || cat.includes('약국')) return 'ph-first-aid';
+        if(cat.includes('교육') || cat.includes('성장') || cat.includes('학원') || cat.includes('도서')) return 'ph-graduation-cap';
+        if(cat.includes('기타') || cat.includes('생활')) return 'ph-dots-three-circle';
+        if(cat.includes('급여') || cat.includes('수입') || cat.includes('수익') || cat.includes('용돈')) return 'ph-piggy-bank';
         return 'ph-receipt';
     }
 
@@ -790,15 +805,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- 6. Analytics (통계 화면) 로직 통합 ----
     const categoryChartOptions = {
-        series: [35, 25, 20, 15, 5],
+        series: [30, 22, 18, 12, 8, 5, 3, 2],
         chart: {
             type: 'donut',
             height: 250,
             fontFamily: 'Inter, sans-serif',
             animations: { enabled: true, easing: 'easeinout', speed: 800 }
         },
-        labels: ['식비/카페', '마트/장보기', '교통/차량', '문화/여가', '육아/가족'],
-        colors: ['#FFB7B2', '#B5EAD7', '#9BA4B5', '#E2F0CB', '#C7CEEA'],
+        labels: ['식비/카페', '마트/장보기', '교통/차량', '문화/여가', '육아/가족', '의료/미용', '교육/성장', '기타/생활'],
+        colors: ['#FFB7B2', '#B5EAD7', '#9BA4B5', '#E2F0CB', '#C7CEEA', '#FFDAC1', '#A2D5F2', '#D5C6E0'],
         plotOptions: {
             pie: {
                 donut: {
@@ -819,28 +834,61 @@ document.addEventListener('DOMContentLoaded', () => {
     categoryChart = new ApexCharts(document.querySelector("#categoryChart"), categoryChartOptions);
     categoryChart.render();
 
-    // 6.1 날짜 নে비게이터 및 통계 관점 스위칭 로직
+    // 6.1 날짜 네비게이터 및 통계 관점 스위칭 로직
     const periodLabel = document.getElementById('current-period-label');
     const periodRadios = document.querySelectorAll('input[name="period"]');
     const modeRadiosAnalytics = document.querySelectorAll('input[name="analyticsMode"]');
     
-    // 모의 기준 데이터 (현재)
-    let currentPeriodType = 'month'; // day, week, month, quarter, year, specific
-    let currentAnalyticsMode = 'budget'; // budget, income
-    let currentSpecificDate = null; // Date picker 선택 값 저장용
+    // 기간 상태 변수(currentPeriodType, currentAnalyticsMode, currentSpecificDate, currentPeriodAnchor)는
+    // 스크립트 상단 전역 영역에서 선언합니다 (TDZ/호이스팅 충돌 방지).
     
-    // 선택된 탭에 따라 상단 텍스트를 모의 변경하는 함수
+    // ---- 날짜 문자열 유틸 (KST 안전 파싱) ----
+    function parseISODate(dateStr) {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    }
+    function toISOStr(dt) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+    }
+    function formatKoreanDate(dateStr) {
+        const dt = parseISODate(dateStr);
+        return `${dt.getFullYear()}년 ${dt.getMonth() + 1}월 ${dt.getDate()}일`;
+    }
+    // 해당 날짜가 속한 월~일 주간 범위 반환
+    function getWeekRange(dateStr) {
+        const dt = parseISODate(dateStr);
+        const day = dt.getDay(); // 0(일) ~ 6(토)
+        const diffToMonday = (day === 0) ? -6 : (1 - day);
+        const start = new Date(dt);
+        start.setDate(dt.getDate() + diffToMonday);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return { start: toISOStr(start), end: toISOStr(end) };
+    }
+    
+    // 현재 기준 날짜(앵커)에 맞춘 실제 기간 텍스트 표시
     function updatePeriodLabelText(type) {
-        if(type === 'day') periodLabel.innerText = '오늘 하루';
-        else if(type === 'week') periodLabel.innerText = '이번 주간';
-        else if(type === 'month') periodLabel.innerText = '이번 달';
-        else if(type === 'quarter') periodLabel.innerText = '이번 분기';
-        else if(type === 'year') periodLabel.innerText = '올 한 해';
+        const anchorStr = currentPeriodAnchor || getLocalISODate();
+        if(type === 'day') periodLabel.innerText = formatKoreanDate(anchorStr);
+        else if(type === 'week') {
+            const wk = getWeekRange(anchorStr);
+            periodLabel.innerText = `${wk.start} ~ ${wk.end}`;
+        }
+        else if(type === 'month') periodLabel.innerText = `${anchorStr.substring(0,4)}년 ${parseInt(anchorStr.substring(5,7), 10)}월`;
+        else if(type === 'quarter') {
+            const q = Math.floor((parseInt(anchorStr.substring(5,7), 10) - 1) / 3) + 1;
+            periodLabel.innerText = `${anchorStr.substring(0,4)}년 ${q}분기`;
+        }
+        else if(type === 'year') periodLabel.innerText = `${anchorStr.substring(0,4)}년`;
+        else if(type === 'specific') periodLabel.innerText = currentSpecificDate || anchorStr;
     }
 
     periodRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
             currentPeriodType = e.target.value;
+            currentPeriodAnchor = getLocalISODate(); // 단위 전환 시 오늘 기준으로 리셋
+            currentSpecificDate = null;
             updatePeriodLabelText(currentPeriodType);
             syncAppRenders();
         });
@@ -859,6 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
         specificDatePicker.addEventListener('change', (e) => {
             currentPeriodType = 'specific';
             currentSpecificDate = e.target.value; // "YYYY-MM-DD"
+            currentPeriodAnchor = currentSpecificDate;
             
             // 시각적 피드백: 기존 탭 선택 해제 및 날짜 텍스트 반영
             periodRadios.forEach(r => r.checked = false);
@@ -867,14 +916,51 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // 화살표 클릭 시 모션 효과 (실제 날짜 증감 로직은 모의로 텍스트 깜빡임만 구현)
-    document.getElementById('prev-period-btn').addEventListener('click', () => { animPeriodLabel(); });
-    document.getElementById('next-period-btn').addEventListener('click', () => { animPeriodLabel(); });
+    // 화살표 클릭 시 실제 기준 날짜를 이전/다음 단위로 이동
+    document.getElementById('prev-period-btn').addEventListener('click', () => { shiftPeriod(-1); });
+    document.getElementById('next-period-btn').addEventListener('click', () => { shiftPeriod(1); });
     
-    function animPeriodLabel() {
+    function shiftPeriod(dir) {
+        const baseStr = currentPeriodAnchor || getLocalISODate();
+        const dt = parseISODate(baseStr);
+        
+        switch (currentPeriodType) {
+            case 'day':
+            case 'specific':
+                dt.setDate(dt.getDate() + dir);
+                break;
+            case 'week':
+                dt.setDate(dt.getDate() + (7 * dir));
+                break;
+            case 'month':
+                dt.setDate(1); // 월말 일수 차이로 인한 월 건너뜀 방지
+                dt.setMonth(dt.getMonth() + dir);
+                break;
+            case 'quarter':
+                dt.setDate(1);
+                dt.setMonth(dt.getMonth() + (3 * dir));
+                break;
+            case 'year':
+                dt.setFullYear(dt.getFullYear() + dir);
+                break;
+        }
+        
+        currentPeriodAnchor = toISOStr(dt);
+        if (currentPeriodType === 'specific') currentSpecificDate = currentPeriodAnchor;
+        
+        // 라벨 전환 모션 효과 후 실제 기간 텍스트 갱신
         periodLabel.style.opacity = 0;
-        setTimeout(() => { periodLabel.style.opacity = 1; }, 200);
+        setTimeout(() => {
+            updatePeriodLabelText(currentPeriodType);
+            periodLabel.style.opacity = 1;
+        }, 200);
+        
+        // 해당 기간의 데이터만 다시 필터링하여 차트/목록 재렌더링
+        syncAppRenders();
     }
+    
+    // 앱 구동 시 현재 선택된 기간(기본: 월별)으로 라벨 초기화
+    updatePeriodLabelText(currentPeriodType);
 
     // 6.2 실제 로컬 데이터 기반 통계(아코디언) 렌더링
     const analyticsListArea = document.getElementById('analytics-list');
@@ -883,8 +969,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!analyticsListArea) return;
         analyticsListArea.innerHTML = '';
         const labels = Object.keys(catTotals);
-        const icons = ['ph-coffee', 'ph-shopping-cart', 'ph-car', 'ph-film-strip', 'ph-baby'];
-        const colors = ['#FFB7B2', '#B5EAD7', '#9BA4B5', '#E2F0CB', '#C7CEEA'];
+        const icons = ['ph-coffee', 'ph-shopping-cart', 'ph-car', 'ph-film-strip', 'ph-baby', 'ph-first-aid', 'ph-graduation-cap', 'ph-dots-three-circle'];
+        const colors = ['#FFB7B2', '#B5EAD7', '#9BA4B5', '#E2F0CB', '#C7CEEA', '#FFDAC1', '#A2D5F2', '#D5C6E0'];
         
         // 분모(Denominator)가 0인 경우 방어 로직
         const safeDenominator = denominator > 0 ? denominator : 1;
@@ -933,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---- 6.3 Toast 알림 UI 함수 (동적 생성) ----
-    function showToast(message) {
+    function showToast(message, isError = false) {
         let toastEl = document.getElementById('global-toast');
         if (!toastEl) {
             toastEl = document.createElement('div');
@@ -941,7 +1027,9 @@ document.addEventListener('DOMContentLoaded', () => {
             toastEl.className = 'toast';
             document.body.appendChild(toastEl);
         }
-        toastEl.innerHTML = `<i class="ph ph-info"></i><span>${message}</span>`;
+        const icon = isError ? 'ph-warning-circle' : 'ph-check-circle';
+        const iconColor = isError ? '#e63946' : 'var(--success, #4361ee)';
+        toastEl.innerHTML = `<i class="ph ${icon}" style="color:${iconColor}"></i><span>${message}</span>`;
         toastEl.classList.remove('hidden', 'show');
         void toastEl.offsetWidth; // 리플로우 강제 트리거
         toastEl.classList.add('show');
@@ -950,6 +1038,135 @@ document.addEventListener('DOMContentLoaded', () => {
         toastEl.hideTimeout = setTimeout(() => {
             toastEl.classList.remove('show');
         }, 2500);
+    }
+
+    // ---- 6.4 데이터 백업 / 엑셀(CSV) 내보내기 / 백업 파일 복원 ----
+    const backupJsonBtn = document.getElementById('backup-json-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const restoreJsonBtn = document.getElementById('restore-json-btn');
+    const restoreJsonInput = document.getElementById('restore-json-input');
+    
+    // 파일명용 날짜 스탬프 (예: 20261106)
+    function getFileDateStamp() {
+        return getLocalISODate().replace(/-/g, '');
+    }
+    
+    // 브라우저 파일 다운로드 공통 처리
+    function downloadBlobFile(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    
+    // 1) 데이터 백업: 유저 정보 + 전체 내역/일기 + 테마 설정을 JSON 하나로 저장
+    if (backupJsonBtn) {
+        backupJsonBtn.addEventListener('click', () => {
+            if (!appRecords.length && !userData) {
+                showToast('백업할 데이터가 없습니다. 먼저 가계부를 기록해주세요.', true);
+                return;
+            }
+            const backupPayload = {
+                app: 'smart-account-book',
+                version: 1,
+                backupDate: new Date().toISOString(),
+                userData: userData || null,
+                records: appRecords,
+                theme: localStorage.getItem('smartAccountTheme') || 'default'
+            };
+            const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+            downloadBlobFile(blob, `가계부백업_${getFileDateStamp()}.json`);
+            showToast(`백업 완료! ${(appRecords.length)}개의 기록이 저장되었습니다. 💾`);
+        });
+    }
+    
+    // 2) 소비/수입 내역 엑셀(CSV) 내보내기 (한글 깨짐 방지 UTF-8 BOM)
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', () => {
+            const moneyRecords = appRecords.filter(r => r.type === 'expense' || r.type === 'income')
+                .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+            
+            if (moneyRecords.length === 0) {
+                showToast('내보낼 소비/수입 내역이 없습니다.', true);
+                return;
+            }
+            
+            const csvEscape = (val) => {
+                const s = String(val === undefined || val === null ? '' : val);
+                // 쉼표, 따옴표, 줄바꿈 포함 시 큰따옴표로 감싸고 내부 따옴표는 두 번 겹치기
+                if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+                return s;
+            };
+            
+            const header = ['날짜', '구분', '카테고리', '내역명', '금액', '메모'];
+            const rows = moneyRecords.map(r => [
+                r.date || '',
+                r.type === 'income' ? '수입' : '지출',
+                r.category || '',
+                r.title || '',
+                Number(r.amount) || 0,
+                r.memo || ''
+            ].map(csvEscape).join(','));
+            
+            const csvContent = '\uFEFF' + header.join(',') + '\n' + rows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            downloadBlobFile(blob, `가계부내역_${getFileDateStamp()}.csv`);
+            showToast(`엑셀(CSV) 내보내기 완료! (${moneyRecords.length}건) 📊`);
+        });
+    }
+    
+    // 3) 백업 파일 복원: JSON 검증 후 localStorage 복원 및 자동 재렌더링
+    if (restoreJsonBtn && restoreJsonInput) {
+        restoreJsonBtn.addEventListener('click', () => {
+            restoreJsonInput.click();
+        });
+        
+        restoreJsonInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const parsed = JSON.parse(event.target.result);
+                    
+                    // 유효성 검증: records 배열 또는 userData가 있어야 복원 가능
+                    const isValidRecords = parsed && Array.isArray(parsed.records);
+                    const isValidUserData = parsed && (parsed.userData === null || typeof parsed.userData === 'object');
+                    if (!isValidRecords && !isValidUserData) {
+                        showToast('잘못된 백업 파일입니다. 가계부 백업 파일(.json)을 선택해주세요.', true);
+                        return;
+                    }
+                    
+                    const recordCount = Array.isArray(parsed.records) ? parsed.records.length : 0;
+                    const scopeNote = parsed.userData ? ', 예산/이름 설정 포함' : '';
+                    const confirmMsg = `백업 파일을 복원하면 현재 기기에 저장된 데이터가 백업 파일 내용으로 교체됩니다.\n(기록 ${recordCount}건${scopeNote})\n복원하시겠습니까?`;
+                    if (!confirm(confirmMsg)) return;
+                    
+                    // localStorage 복원
+                    if (parsed.userData) localStorage.setItem('smartAccountUserData', JSON.stringify(parsed.userData));
+                    if (Array.isArray(parsed.records)) localStorage.setItem('smartAccountRecords', JSON.stringify(parsed.records));
+                    if (parsed.theme) localStorage.setItem('smartAccountTheme', parsed.theme);
+                    
+                    showToast('백업 파일 복원 완료! 화면을 새로 불러옵니다. 📤');
+                    // 저장된 테마/데이터 기준으로 화면 자동 새로고침 및 재렌더링
+                    setTimeout(() => window.location.reload(), 800);
+                } catch (err) {
+                    console.error('Restore Error:', err);
+                    showToast('파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.', true);
+                } finally {
+                    restoreJsonInput.value = ''; // 같은 파일 재선택 대비
+                }
+            };
+            reader.onerror = () => {
+                showToast('파일을 읽는 중 오류가 발생했습니다.', true);
+            };
+            reader.readAsText(file, 'utf-8');
+        });
     }
 
     // ---- 7. Settings (예산 설정 저장 버튼 연동) ----
