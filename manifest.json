@@ -1,0 +1,27 @@
+{
+    "name": "우리가족 감성 가계부",
+    "short_name": "감성가계부",
+    "description": "가족·연인이 함께 쓰는 귀여운 뉴모피즘 감성 가계부. 오프라인에서도 사용할 수 있어요.",
+    "lang": "ko",
+    "dir": "ltr",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#f0f2f5",
+    "theme_color": "#f0f2f5",
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

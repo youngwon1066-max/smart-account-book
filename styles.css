@@ -917,3 +917,36 @@ textarea.neu-input { resize: none; }
   100% { transform: translateX(0); }
 }
 .scanning { animation: shake 0.8s infinite ease-in-out; opacity: 0.8; }
+
+/* ===== PWA 앱 설치 안내 배너 ===== */
+.install-banner {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #f0f2f5;
+    border-radius: 18px;
+    box-shadow: 6px 6px 14px rgba(163, 177, 198, 0.45),
+                -6px -6px 14px rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+}
+.install-banner-icon { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.install-banner-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.35; flex: 1; }
+.install-banner-text strong { font-size: 14px; }
+.install-banner-text span { color: #8a93a5; }
+.install-banner-btn { padding: 8px 14px; font-size: 13px; border-radius: 12px; flex: none; }
+.install-banner-close {
+    flex: none;
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    color: #8a93a5;
+    padding: 2px 6px;
+    cursor: pointer;
+}

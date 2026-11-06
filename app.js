@@ -1268,3 +1268,67 @@ document.addEventListener('DOMContentLoaded', () => {
         syncAppRenders();
     }
 });
+
+/* ============================================================
+ * PWA: 서비스 워커 등록 + 홈 화면 앱 설치(beforeinstallprompt) 처리
+ * ============================================================ */
+(() => {
+    // 1) 서비스 워커 등록 (오프라인 사용 지원)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then((registration) => {
+                    console.log('[PWA] 서비스 워커 등록 완료:', registration.scope);
+                })
+                .catch((err) => {
+                    console.warn('[PWA] 서비스 워커 등록 실패:', err);
+                });
+        });
+    }
+
+    // 2) 설치 안내 배너 (브라우저가 설치 이벤트를 줄 때만 노출)
+    const banner = document.getElementById('install-banner');
+    let deferredPrompt = null;
+
+    const hideBanner = () => { if (banner) banner.style.display = 'none'; };
+
+    // 이미 standalone(설치된 앱)으로 실행 중이면 안내하지 않음
+    if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+        hideBanner();
+    }
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        if (banner && !window.matchMedia('(display-mode: standalone)').matches) {
+            banner.style.display = 'flex';
+        }
+    });
+
+    const installBtn = document.getElementById('install-btn');
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const choice = await deferredPrompt.userChoice;
+            if (choice && choice.outcome === 'accepted') {
+                if (typeof showToast === 'function') {
+                    showToast('감성가계부를 홈 화면에 설치했어요! 🎉');
+                }
+            }
+            deferredPrompt = null;
+            hideBanner();
+        });
+    }
+
+    const closeBtn = document.getElementById('install-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', hideBanner);
+    }
+
+    // 설치가 완료되면 배너를 자동으로 닫음
+    window.addEventListener('appinstalled', () => {
+        hideBanner();
+        deferredPrompt = null;
+    });
+})();

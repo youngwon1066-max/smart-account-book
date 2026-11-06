@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>우리가족 감성 가계부</title>
+    <!-- PWA: 앱으로 설치하기 위한 매니페스트와 모바일 메타 태그 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f0f2f5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="감성가계부">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
     <!-- Phosphor Icons (귀여운 외곽선 아이콘) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="styles.css">
@@ -393,6 +402,17 @@
             </div>
         </div>
     </div><!-- /.app-container -->
+
+    <!-- 홈 화면 앱 설치 안내 배너 (기본 숨김) -->
+    <div id="install-banner" class="install-banner" style="display:none;">
+        <img src="icons/icon-192.png" alt="감성가계부" class="install-banner-icon">
+        <div class="install-banner-text">
+            <strong>감성가계부를 앱으로 쓰세요 📱</strong>
+            <span>바탕화면 아이콘으로 실행하세요</span>
+        </div>
+        <button id="install-btn" class="neu-button primary-btn install-banner-btn">설치하기</button>
+        <button id="install-close-btn" class="install-banner-close" aria-label="닫기">&times;</button>
+    </div>
 
     <!-- Tesseract.js 외부 라이브러리 추가 (브라우저 무료 OCR) -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
