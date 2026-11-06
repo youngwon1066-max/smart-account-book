@@ -3,7 +3,7 @@
  * - 전략: 탐색(HTML)은 네트워크 우선(실패 시 캐시), 그 외 핵심 자산은 캐시 우선(백그라운드 갱신).
  * - activate 시점에 구버전 캐시를 정리합니다.
  */
-const CACHE_NAME = 'sab-cache-v2';
+const CACHE_NAME = 'sab-cache-v3';
 
 // 캐시할 핵심 자산
 const CORE_ASSETS = [
@@ -16,11 +16,13 @@ const CORE_ASSETS = [
     './icons/icon-512.png'
 ];
 
-// 설치: 핵심 자산 사전 캐싱
+// 설치: 핵심 자산 사전 캐싱 (cache: 'reload'로 HTTP 캐시 우회 → 항상 최신본 저장)
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(CORE_ASSETS))
+            .then((cache) => Promise.all(
+                CORE_ASSETS.map((url) => cache.add(new Request(url, { cache: 'reload' })))
+            ))
             .then(() => self.skipWaiting())
     );
 });
@@ -75,17 +77,19 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 같은 출처의 정적 자산: 캐시 우선, 없으면 네트워크에서 받아 캐시에 저장
+    // 같은 출처의 정적 자산: stale-while-revalidate (캐시로 즉시 응답하고, 백그라운드에서 최신본을 받아 갱신)
     event.respondWith(
-        caches.match(request).then((cached) => {
-            if (cached) return cached;
-            return fetch(request).then((response) => {
-                if (response && response.status === 200) {
-                    const copy = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-                }
-                return response;
-            });
+        caches.open(CACHE_NAME).then(async (cache) => {
+            const cached = await cache.match(request);
+            const network = fetch(request)
+                .then((response) => {
+                    if (response && response.status === 200) {
+                        cache.put(request, response.clone());
+                    }
+                    return response;
+                })
+                .catch(() => cached);
+            return cached || network;
         })
     );
 });
