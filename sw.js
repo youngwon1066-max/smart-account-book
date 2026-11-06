@@ -3,7 +3,7 @@
  * - 전략: 탐색(HTML)은 네트워크 우선(실패 시 캐시), 그 외 핵심 자산은 캐시 우선(백그라운드 갱신).
  * - activate 시점에 구버전 캐시를 정리합니다.
  */
-const CACHE_NAME = 'sab-cache-v1';
+const CACHE_NAME = 'sab-cache-v2';
 
 // 캐시할 핵심 자산
 const CORE_ASSETS = [
